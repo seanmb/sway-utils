@@ -1,0 +1,14 @@
+
+dist/sway-utils-0.0.1.tar.gz
+
+dist/sway_utils-0.0.1-py3-none-any.whl
+
+*.whl
+
+sway_utils.egg-info/dependency_links.txt
+
+sway_utils.egg-info/PKG-INFO
+
+sway_utils.egg-info/SOURCES.txt
+
+sway_utils.egg-info/top_level.txt
