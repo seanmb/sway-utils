@@ -12,3 +12,9 @@ sway_utils.egg-info/PKG-INFO
 sway_utils.egg-info/SOURCES.txt
 
 sway_utils.egg-info/top_level.txt
+
+__pycache__/__init__.cpython-36.pyc
+
+__pycache__/metrics.cpython-36.pyc
+
+dist/sway__utils-0.0.1.tar.gz

@@ -449,7 +449,7 @@ def load_balance_master_file(rootDir,
                              age,
                              kinectTrialType,
                              trialNumber = 1,
-                             swayMetric = SwayMetric.RDIS):
+                             swayMetric = SwayMetric.RDIST):
 
     root = ''
     dirs = []

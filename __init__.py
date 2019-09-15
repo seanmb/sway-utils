@@ -1,1 +1,1 @@
-name = 'sway-utils'
+name = 'sway__utils'

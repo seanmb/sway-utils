@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="sway-utils",
+    name="sway__utils",
     version="0.0.1",
     author="Sean Maudsley-Barton",
     author_email="s.maudsley-barton@mmu.ac.uk",
