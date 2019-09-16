@@ -1,5 +1,5 @@
 # sway_utils
----
+
 A set of utilties that calulate common metrics of postural sway. from raw Kinect V2 and Balance Master data - other forceplates coming soon.
 
 Metrics calulated
