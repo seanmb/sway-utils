@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
 
-from enum import Enum
+from enum import Enum        
 
 #%%
 class SOTTrial(Enum):
@@ -88,7 +88,171 @@ class SwayGroup(Enum):
     Old_vs_single_fallers = 12
     Young_vs_all_fallers = 13
     Young_and_Middle = 14
+    
 
+SPINEBASE = 0
+SPINEMID = 1
+NECK = 2
+HEAD = 3
+SHOULDERLEFT = 4
+ELBOWLEFT = 5
+WRISTLEFT = 6
+HANDLEFT = 7
+SHOULDERRIGHT = 8
+ELBOWRIGHT = 9
+WRISTRIGHT = 10
+HANDRIGHT = 11
+HIPLEFT = 12
+KNEELEFT = 13
+ANKLELEFT = 14
+FOOTLEFT = 15
+HIPRIGHT = 16
+KNEERIGHT = 17
+ANKLERIGHT = 18
+FOOTRIGHT = 19
+SPINESHOULDER = 20
+HANDTIPLEFT = 21
+THUMBLEFT = 22
+HANDTIPRIGHT = 23
+THUMBRIGHT = 24
+
+#%%
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+
+def get_angle_between_two_joints(j1, j2):
+    ''' Returns the angle in degrees between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966 rad / 90 deg
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0 rad / 0.0 deg
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793 rad / 180 deg
+    '''
+    v1_u = unit_vector(j1)
+    v2_u = unit_vector(j2)
+    rad_between_two_joints = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+    
+    #deg_between_two_joints = (rad_between_two_joints * 180) / np.pi
+    deg_between_two_joints = np.degrees(rad_between_two_joints)
+    
+    return deg_between_two_joints
+
+
+def normalise_skeleton(skel_frame, spine_base_joint):
+    normalised_skel_frame = np.copy(skel_frame)
+    x = 0
+    y = 1
+    z = 2
+
+    for i in range(skel_frame.shape[0]):
+        normalised_skel_frame[i][2] =  str(100*(float(skel_frame[i][2]) - spine_base_joint[x]))
+        normalised_skel_frame[i][3] =  str(100*(float(skel_frame[i][3]) - spine_base_joint[y]))
+        normalised_skel_frame[i][4] =  str(100*(float(skel_frame[i][4]) - spine_base_joint[z]))
+
+    return normalised_skel_frame
+
+
+def calculate_com(skelFrame):
+    _X = 2
+    _Y = 3
+    _Z = 4
+
+    spine_shoulder = np.stack([float(skelFrame[SPINESHOULDER, _X]), float(skelFrame[SPINESHOULDER, _Y]), float(skelFrame[SPINESHOULDER, _Z])], axis=0)
+    spine_base = np.stack([float(skelFrame[SPINEBASE, _X]), float(skelFrame[SPINEBASE, _Y]), float(skelFrame[SPINEBASE, _Z])], axis=0)
+    spine_mid = np.stack([float(skelFrame[SPINEMID, _X]), float(skelFrame[SPINEMID, _Y]), float(skelFrame[SPINEMID, _Z])], axis=0)
+    hip_left = np.stack([float(skelFrame[HIPLEFT, _X,]), float(skelFrame[HIPLEFT, _Y,]), float(skelFrame[HIPLEFT, _Z])], axis=0)
+    hip_right = np.stack([float(skelFrame[HIPRIGHT, _X]), float(skelFrame[HIPRIGHT, _Y]), float(skelFrame[HIPRIGHT, _Z])], axis=0)
+
+    #xMean = np.mean([spine_shoulder[0],hip_left[0],hip_right[0]])
+    #yMean = np.mean([spine_shoulder[1],hip_left[1],hip_right[1]])
+    #zMean = np.mean([spine_shoulder[2],hip_left[2],hip_right[2]])
+
+    #xMean = np.mean([spine_base[0],hip_left[0],hip_right[0]])
+    #yMean = np.mean([spine_base[1],hip_left[1],hip_right[1]])
+    #zMean = np.mean([spine_base[2],hip_left[2],hip_right[2]])
+    
+    xMean = np.mean([spine_mid[0],hip_left[0],hip_right[0]])
+    yMean = np.mean([spine_mid[1],hip_left[1],hip_right[1]])
+    zMean = np.mean([spine_mid[2],hip_left[2],hip_right[2]])
+    
+    com = np.stack([xMean,yMean,zMean],axis=0)
+
+    return com.tolist()
+
+
+def euclidean_distance_between_joints(j1, j2):
+    ed = np.sqrt(np.square(j1[0] - j2[0]) + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
+    #ed = np.sqrt(np.square(j1[0] - j2[0]) + 0 + np.square(j1[2] - j2[2]))
+    #ed = np.sqrt(np.square(j1[0] - j2[0]) + np.square(j1[1] - j2[1]) + 0)  
+    #ed = np.sqrt(0 + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
+    
+    return ed
+    
+
+def get_angle_between_three_joints_old(j1, j2, j3):
+    
+    l1 = euclidean_distance_between_joints(j1, j2)
+    l2 = euclidean_distance_between_joints(j2, j3)
+    
+    rad_between_three_joints = np.arccos(l2/l1)
+    deg_between_three_joints = np.degrees(rad_between_three_joints) 
+    
+    return deg_between_three_joints
+
+
+def get_angle_between_three_joints_by_matirx(j1, j2, j3):
+    
+    #l1 = euclidean_distance_between_joints(j1, j2)
+    #l2 = euclidean_distance_between_joints(j2, j3)
+    
+    v_j1_To_j2 = [j1[0] - j2[0], j1[1] - j2[1], j1[2] - j2[2]]
+    v_j2_To_j3 = [j2[0] - j3[0], j2[1] - j3[1], j2[2] - j3[2]]
+    
+    #v_j1_To_j2 = [j1[0] - j2[0], j1[1] - j2[1], 0]
+    #v_j2_To_j3 = [j2[0] - j3[0], j2[1] - j3[1], 0]
+    
+    v_j1_To_j2_u = unit_vector(v_j1_To_j2)
+    v_j2_To_j3_u = unit_vector(v_j2_To_j3)
+    
+    #cross_product = np.cross(v_j1_To_j2_u, v_j2_To_j3_u)
+    #cross_productLength = cross_product[2]
+    #dot_product = np.dot(v_j1_To_j2_u, v_j2_To_j3_u)
+    #rad_between_three_joints = np.arctan2(cross_productLength, dot_product)
+    #deg_between_three_joints = np.degrees(rad_between_three_joints)
+    
+    rad_between_three_joints2 = np.arccos(np.clip(np.dot(v_j1_To_j2_u, v_j2_To_j3_u), -1.0, 1.0))
+    deg_between_three_joints2 = np.degrees(rad_between_three_joints2)
+    
+    return deg_between_three_joints2
+
+
+def get_angle_between_three_joints(j1, j2, j3):
+    
+    #useing cosign rule
+    
+    a = euclidean_distance_between_joints(j1, j2)
+    b = euclidean_distance_between_joints(j2, j3)
+    c = euclidean_distance_between_joints(j3, j1)
+
+    angle_C = np.degrees(np.arccos((a**2 + b**2 - c**2) / (2 * a * b)))
+    
+    return angle_C
+
+
+def get_AP_angle_between_three_joints(j1, j2, j3):
+    
+    l1 =  np.sqrt(np.square(j1[2] - j2[2]))
+    l2 =  np.sqrt(np.square(j2[2] - j3[2]))
+    
+    rad_between_three_joints = np.arccos(l2/l1)
+    deg_between_three_joints = np.degrees(rad_between_three_joints) 
+    
+    return deg_between_three_joints
+    
 #%%
 def get_unique_values(full_list):
     '''
@@ -177,27 +341,31 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
     # render plot with "plt.show()".
 
 
-def filter_signal(ML_path, AP_path, UD_path=[], N=1, fc=10, fs=30):
-
-    #N = 1 #1 2
-    #fc = 10 #10 6  # Cut-off frequency of the filter
-    #fs = 30
-    #Wn = fc / (fs / 2) # Normalize the frequency
+def filter_signal(ML_path, AP_path=[], CC_path=np.array([]), N=1, fc=10, fs=30):
+    '''
+    N = order of the filer - usually 1, 2 or 4
+    fc = Cut-off frequency of the filter - usually 10 or 6 
+    fs = 30
+    Wn = fc / (fs / 2) # Normalize the frequency
+    '''
     
     Wn = np.pi * fc / (2 * fs) # Normalize the frequency
     
     b, a = signal.butter(N, Wn, 'low', fs=fs)
     filtered_ML_path = signal.filtfilt(b, a, ML_path)
-    filtered_AP_path = signal.filtfilt(b, a, AP_path)
     
-    if UD_path != []:
-        filtered_UD_path = signal.filtfilt(b, a, UD_path)
+    if AP_path != []:
+        filtered_AP_path = signal.filtfilt(b, a, AP_path)
+    
+    if CC_path != []:
+        filtered_CC_path = signal.filtfilt(b, a, CC_path)
 
-    if UD_path != []:
-        return filtered_ML_path, filtered_AP_path, filtered_UD_path
-    else:
+    if CC_path != []:
+        return filtered_ML_path, filtered_AP_path, filtered_CC_path
+    if AP_path != []:
         return filtered_ML_path, filtered_AP_path
-
+    else:
+        return filtered_ML_path
 
 def calculate_RD(selected_recording,
                deviceType = DeviceType.KINECT,

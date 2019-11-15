@@ -9,4 +9,3 @@ Metrics calulated
 * mean sway velocity
 * mean sway frequency
 * 95% confidence circle area
-
