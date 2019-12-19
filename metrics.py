@@ -268,7 +268,7 @@ def get_unique_values(full_list):
     return unnique_list
 
 
-def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
+def confidence_ellipse(x, y, ax, n_std=1.96, facecolor='none', **kwargs):
     '''
     Create a plot of the covariance confidence ellipse of `x` and `y`
 
@@ -280,6 +280,7 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
         The axes object to draw the ellipse into.
     n_std : float
         The number of standard deviations to determine the ellipse's radiuses.
+        1.96 SD = 95% confidence ellipse
     Returns
     -------
     matplotlib.patches.Ellipse
@@ -297,10 +298,10 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
     ell_radius_x = np.sqrt(1 + pearson)
     ell_radius_y = np.sqrt(1 - pearson)
     ellipse = Ellipse((0, 0),
-        width=ell_radius_x * 2,
-        height=ell_radius_y * 2,
-        facecolor=facecolor,
-        **kwargs)
+            width=ell_radius_x * 2,
+            height=ell_radius_y * 2,
+            facecolor=facecolor,
+            **kwargs)
 
     # Calculating the stdandard deviation of x from
     # the squareroot of the variance and multiplying
@@ -316,8 +317,23 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
         .rotate_deg(45) \
         .scale(scale_x, scale_y) \
         .translate(mean_x, mean_y)
+        
+    ellipse.set_transform(transf + ax.transData)
+    
+    scaled_ell_radius_x =  ell_radius_x * scale_x
+    scaled_ell_radius_y =  ell_radius_y * scale_y
+    
+    width = scaled_ell_radius_x * 2
+    height = scaled_ell_radius_y * 2
+    
+    #width = ellipse.width
+    #height = ellipse.height
+    area = np.pi * (width / 2) * (height / 2)
+    
+    return ax.add_patch(ellipse), width, height, area #, angle #ell_radius_x, ell_radius_y
+    
 
-
+    '''
      # Find and sort eigenvalues and eigenvectors into descending order
     eigvals, eigvecs = np.linalg.eigh(cov)
     order = eigvals.argsort()[::-1]
@@ -334,14 +350,15 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
 
     ell = Ellipse(xy=(np.mean(x), np.mean(y)), width=width, height=height,
                      angle=angle, facecolor=facecolor, **kwargs)
-
-    #ellipse.set_transform(transf + ax.transData)
-    #return ax.add_patch(ellipse), width, height, area, angle #ell_radius_x, ell_radius_y
     return ax.add_patch(ell), width, height, area, angle #ell_radius_x, ell_radius_y
+    '''
+
+    
+    
     # render plot with "plt.show()".
 
 
-def filter_signal(ML_path, AP_path=[], CC_path=np.array([]), N=1, fc=10, fs=30):
+def filter_signal(ML_path, AP_path=[], CC_path=np.array([]), N=2, fc=10, fs=30):
     '''
     N = order of the filer - usually 1, 2 or 4
     fc = Cut-off frequency of the filter - usually 10 or 6 
@@ -369,7 +386,9 @@ def filter_signal(ML_path, AP_path=[], CC_path=np.array([]), N=1, fc=10, fs=30):
 
 def calculate_RD(selected_recording,
                deviceType = DeviceType.KINECT,
-               rd_path = ''):
+               rd_path = '',
+               part_id = '',
+               SOT_trial_type = ''):
     ''' 
         Calulate resultant distance, 
         that is the distance from each point on the raw CoM path to the 
@@ -382,7 +401,7 @@ def calculate_RD(selected_recording,
     if deviceType == DeviceType.KINECT:
         ML_path = selected_recording['CoGx'].values.astype(float)
         AP_path = selected_recording['CoGz'].values.astype(float)
-        ML_path, AP_path = filter_signal(ML_path, AP_path)
+        ML_path, AP_path = filter_signal(ML_path, AP_path, fc=8)
         
     elif deviceType == DeviceType.BALANCE_MASTER:
         ML_path = selected_recording['CoGx'].values.astype(float)
@@ -391,34 +410,69 @@ def calculate_RD(selected_recording,
     mean_ML = np.mean(ML_path)
     mean_AP = np.mean(AP_path)
 
-    ML_RD = np.sqrt(np.square(np.subtract(ML_path, mean_ML)))
-    AP_RD = np.sqrt(np.square(np.subtract(AP_path, mean_AP)))
-    #ML_RD =  np.abs(np.subtract(ML_path, mean_ML))
-    #AP_RD =  np.abs(np.subtract(AP_path, mean_AP))
+    #ML =  np.subtract(ML_path, mean_ML)
+    #AP =  np.subtract(AP_path, mean_AP)
+    ML =  np.abs(np.subtract(ML_path, mean_ML))
+    AP =  np.abs(np.subtract(AP_path, mean_AP))
+    #ML = np.sqrt(np.square(np.subtract(ML_path, mean_ML)))
+    #AP = np.sqrt(np.square(np.subtract(AP_path, mean_AP)))
     
     #get hypotinuse of ML_RD and AP_RD
-    RD = np.sqrt(np.add(np.square(ML_RD),np.square(AP_RD)))
+    RD = np.sqrt(np.add(np.square(ML),np.square(AP)))
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.set_xlim([-8, 8])
     ax.set_ylim([-8, 8])
     
-    elp, width, height, AREA_CE, _ = confidence_ellipse(ML_path, AP_path, ax, n_std=1.96, edgecolor='red')
+    elp, width, height, AREA_CE = confidence_ellipse(ML_path, AP_path, ax, n_std=1.96, edgecolor='red')
     ax.scatter(ML_path, AP_path, s=3)
     
     #area = height * width * np.pi
     AREA_CE = round(AREA_CE, 2)
     #elp_AREA = (elp.height/2) * (elp.width/2) * np.pi
     #ax.set_title(deviceType.name + ' CoM ' + str(round(elp.height, 1)) + ' x ' + str(round(elp.width, 1)) + ' area:' + str(AREA_CE))
-    ax.set_title(deviceType.name + ' CoM ' + 'W:' + str(round(width/2, 2)) + ' cm' + ' x ' + 'H:' + str(round(height/2, 2)) + ' cm' + ' Ar:' + str(AREA_CE) + ' cm sq')
+    #ax.set_title(deviceType.name + ' CoM ' + 'W:' + str(round(width/2, 2)) + ' cm' + ' x ' + 'H:' + str(round(height/2, 2)) + ' cm' + ' Ar:' + str(AREA_CE) + ' cm sq')
+    ax.set_title(str.replace(SOT_trial_type, '-', ' ') + ' ' + part_id + ' CoM 95% CE' + 
+                 '\nW:' + str(round(width, 2)) + ' cm' + 
+                 ' x ' + 
+                 'H:' + str(round(height, 2)) + ' cm' + 
+                 ' Ar:' + str(AREA_CE) + ' cm sq')
     
+    ax.set_aspect('equal')
     if rd_path != '':
         plt.savefig(rd_path)
+    
+    plt.show()
+        
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    #ax.set_xlim([-8, 8])
+    #ax.set_ylim([-8, 8])
+    
+    elp, width, height, AREA_CE = confidence_ellipse(ML_path, AP_path, ax, n_std=1.96, edgecolor='red')
+    ax.scatter(ML_path, AP_path, s=3)
+    
+    #area = height * width * np.pi
+    AREA_CE = round(AREA_CE, 2)
+    #elp_AREA = (elp.height/2) * (elp.width/2) * np.pi
+    #ax.set_title(deviceType.name + ' CoM ' + str(round(elp.height, 1)) + ' x ' + str(round(elp.width, 1)) + ' area:' + str(AREA_CE))
+    #ax.set_title(deviceType.name + ' CoM ' + 'W:' + str(round(width/2, 2)) + ' cm' + ' x ' + 'H:' + str(round(height/2, 2)) + ' cm' + ' Ar:' + str(AREA_CE) + ' cm sq')
+    ax.set_title(str.replace(SOT_trial_type, '-', ' ') + ' ' + part_id + ' CoM 95% CE' + 
+                 '\nW:' + str(round(width, 2)) + ' cm' + 
+                 ' x ' + 
+                 'H:' + str(round(height, 2)) + ' cm' + 
+                 ' Ar:' + str(AREA_CE) + ' cm sq')
+    
+    ax.set_aspect('equal')
+    
+    if rd_path != '':
+        detailed_rd_path = rd_path.replace('confidence_ellipse', 'confidence_ellipse_detailed')
+        plt.savefig(detailed_rd_path)
 
     plt.show()
 
-    return ML_RD, AP_RD, RD, AREA_CE
+    return ML, AP, RD, AREA_CE
 
 
 def calculate_RD_3D(selected_recording,
@@ -450,7 +504,11 @@ def calculate_RD_3D(selected_recording,
     return ML_RD, AP_RD, UD_RD, RD
 
 
-def calulate_TOTEX_from_RD(ML_RD, AP_RD, RD):
+def calculate_angle_change_fequencey():
+    return
+
+
+def calculate_TOTEX(ML, AP):
 
     arr_ML_diff = []
     arr_AP_diff = []
@@ -460,14 +518,14 @@ def calulate_TOTEX_from_RD(ML_RD, AP_RD, RD):
     AP_TOTEX = 0
     TOTEX = 0
 
-    for step in range(1, len(RD)):
-        ML_curr = ML_RD[step]
-        AP_curr = AP_RD[step]
-        RD_curr = RD[step]
+    for step in range(1, len(AP)):
+        ML_curr = ML[step]
+        AP_curr = AP[step]
+        #RD_curr = RD[step]
 
-        ML_prev = ML_RD[step - 1]
-        AP_prev = AP_RD[step - 1]
-        RD_prev = RD[step - 1]
+        ML_prev = ML[step - 1]
+        AP_prev = AP[step - 1]
+        #RD_prev = RD[step - 1]
 
         ML_diff = abs(ML_curr - ML_prev)
         AP_diff = abs(AP_curr - AP_prev)
@@ -484,7 +542,7 @@ def calulate_TOTEX_from_RD(ML_RD, AP_RD, RD):
     AP_TOTEX = np.sum(arr_AP_diff)
     TOTEX = np.sum(arr_tot_diff)
     
-    N = len(RD)
+    N = len(AP)
     d = max(arr_tot_diff)
     FD = np.log(N) / np.log((N * d) / TOTEX)
 
@@ -514,20 +572,21 @@ def calculate_sway_from_recording(selected_recording,
     
     cliped_recording = selected_recording[start : end]
 
-    ML_RD, AP_RD, RD, AREA_CE = calculate_RD(cliped_recording, deviceType, rd_path)
+    ML, AP, RD, AREA_CE = calculate_RD(cliped_recording, deviceType, rd_path, pID, SOT_trial_type)
     recording_length = len(RD)
 
     #--mean DIST and rms DIST
-    MDIST_ML = np.sum(ML_RD)/len(ML_RD)
-    MDIST_AP = np.sum(RD)/len(AP_RD)
+    MDIST_ML = np.sum(ML) / recording_length
+    MDIST_AP = np.sum(AP) / recording_length
     MDIST = np.sum(RD) / recording_length
 
-    RDIST_ML = np.sqrt(np.sum(np.square(ML_RD) / recording_length))
-    RDIST_AP = np.sqrt(np.sum(np.square(AP_RD) / recording_length))
+    RDIST_ML = np.sqrt(np.sum(np.square(ML) / recording_length))
+    RDIST_AP = np.sqrt(np.sum(np.square(AP) / recording_length))
     RDIST = np.sqrt(np.sum(np.square(RD) / recording_length))
+    #rms = np.sqrt(np.mean(RD**2))
 
     #--Total Excursion - TOTEX
-    TOTEX_ML, TOTEX_AP, TOTEX, FD = calulate_TOTEX_from_RD(ML_RD, AP_RD, RD)
+    TOTEX_ML, TOTEX_AP, TOTEX, FD = calculate_TOTEX(ML, AP)
 
     #--Mean Velocity - MVELO
     if deviceType == DeviceType.KINECT:
@@ -543,6 +602,9 @@ def calculate_sway_from_recording(selected_recording,
     MFREQ_ML = MVELO_ML / (4*(np.sqrt(2 * MDIST_ML)))
     MFREQ_AP = MVELO_AP / (4*(np.sqrt(2 * MDIST_AP)))
     MFREQ = MVELO / (2 * np.pi * MDIST)
+    
+    #MFREQ_1 = TOTEX / (2 * np.pi * MDIST * T)
+    #MFREQ_AP_1 = TOTEX_AP / (4*(np.sqrt(2 * MDIST_AP ))  * T)
 
 #    ax = plt.scatter(ML_RD, AP_RD, marker='.')
 #    plt.title(deviceType.name + ' RD path ' + pID  + ' ' + str(round(T, 1)) + ' sec')
@@ -681,3 +743,56 @@ def load_balance_master_file(rootDir,
 
     return dfFinal, selected_trial
     
+
+#%%
+#A = [3,2,1,3,4,2,1]
+#A_mean = np.mean(A)
+#A_ml = np.subtract(A, A_mean)
+#X = list(range(len(A)))
+#Y = np.full(len(A), A_mean)
+#
+#plt.plot(A)
+#plt.plot(A_ml)
+#plt.plot(X, Y)
+#plt.show()
+    
+#%%
+
+#from scipy import stats
+#
+#n_std = 1.96
+#x = np.random.randint(1,100,100)
+#y = x*3 #np.random.randint(1,100,100)
+#
+#cov = np.cov(x, y)
+#pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
+#
+#pearsonr, _ = stats.pearsonr(x, y)
+#
+#ell_radius_x = np.sqrt(1 + pearson)
+#ell_radius_y = np.sqrt(1 - pearson)
+#
+#scale_x = np.sqrt(cov[0, 0]) * n_std
+#mean_x = np.mean(x)
+#
+## calculating the stdandard deviation of y ...
+#scale_y = np.sqrt(cov[1, 1]) * n_std
+#mean_y = np.mean(y)
+#
+## Find and sort eigenvalues and eigenvectors into descending order
+##eigvals, eigvecs = np.linalg.eigh(cov)
+##order = eigvals.argsort()[::-1]
+##eigvals, eigvecs = eigvals[order], eigvecs[:, order]
+#
+## The anti-clockwise angle to rotate our ellipse by
+##vx, vy = eigvecs[:,0][0], eigvecs[:,0][1]
+##theta = np.arctan2(vy, vx)
+##angle = np.degrees(theta)
+#
+## get Width and height of ellipse
+##width, height = 2 * n_std * np.sqrt(eigvals)
+##area = (width/2) * (height/2) * np.pi
+#scaled_ell_radius_x = ell_radius_x * scale_x
+#scaled_ell_radius_y = ell_radius_y * scale_y
+#
+#area = np.pi * scaled_ell_radius_x * scaled_ell_radius_y
