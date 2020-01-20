@@ -558,6 +558,10 @@ def calculate_sway_from_recording(selected_recording,
                                   tNum,
                                   swayMetric = SwayMetric.ALL,
                                   deviceType = DeviceType.KINECT,
+                                  impairment_self = 'healthy',
+                                  impairment_confedence = 'healthy',
+                                  impairment_clinical = 'healthy',
+                                  impairment_stats = 'healthy',
                                   dp = -1,
                                   rd_path = '',
                                   start = 0,
@@ -659,7 +663,10 @@ def calculate_sway_from_recording(selected_recording,
         swayVal = round(swayVal, dp)
     
     if swayMetric == SwayMetric.ALL:
-        tmpSway.append([pID, selected_recording_name, tNum, age, sex, swayMetric.name,
+        tmpSway.append([pID, selected_recording_name, tNum, age, sex, 
+                        impairment_self, impairment_confedence, 
+                        impairment_clinical, impairment_stats,
+                        swayMetric.name,
                         RDIST_ML, RDIST_AP, RDIST,
                         MDIST_ML, MDIST_AP, MDIST,
                         TOTEX_ML, TOTEX_AP, TOTEX,
@@ -667,7 +674,10 @@ def calculate_sway_from_recording(selected_recording,
                         MFREQ_ML, MFREQ_AP, MFREQ,
                         AREA_CE])
     else:
-        tmpSway.append([pID, selected_recording_name, tNum, age, sex, swayMetric.name,
+        tmpSway.append([pID, selected_recording_name, tNum, age, sex, 
+                        impairment_self, impairment_confedence, 
+                        impairment_clinical, impairment_stats,
+                        swayMetric.name,
                         swayVal])
 
 

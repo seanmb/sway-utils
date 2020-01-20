@@ -341,7 +341,7 @@ if __name__ == "__main__":
     #_part_id = '24'
     #_part_id = '404'
     #_part_id = '303'
-    _part_id = '84'
+    _part_id = '700'
     _movement = 'Quiet-Standing-Eyes-Open'
     #_movement = 'Quiet-Standing-Eyes-Closed'
     #_movement = 'Foam-Quiet-Standing-Eyes-Open'
@@ -423,281 +423,281 @@ if __name__ == "__main__":
 #       #ani = animation.FuncAnimation(fig, update, N, fargs=(data, line), interval=10000/N, blit=False)
 #       plt.show()
 #       #break
-sys.exit()
+#sys.exit()
 #%%
-for joint in SkeletonJoints:
+    for joint in SkeletonJoints:
+        joint_number = joint.value
+        joint_name = joint.name
+        X = my_KinectRecording.stacked_raw_XYZ_values_filtered[0, joint_number, :]*100
+        Y = my_KinectRecording.stacked_raw_XYZ_values_filtered[1, joint_number, :]*100
+        Z = my_KinectRecording.stacked_raw_XYZ_values_filtered[2, joint_number, :]*100
+        
+    #    fig = plt.figure(figsize=(10, 10))
+    #    ax = fig.add_subplot(111, projection='3d')
+    #    ax.set_xlabel('X')
+    #    ax.set_ylabel('Y')
+    #    ax.set_zlabel('Z')
+    #    ax.view_init(elev=90, azim=-90)
+    #
+    #    ax.scatter(Xr, Yr, Zr, color='k', marker='o', label=joint_name)
+    #    plt.title(my_KinectRecording._part_id + ' ' + _movement + ' ' +  joint_name + ' ' + str(round((np.mean(Z)),3)))
+    #    ax.autoscale()
+    #    plt.show()
+        
+        
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.view_init(elev=90, azim=-90)
+    
+        ax.scatter(X, Y, Z, color='k', marker='o', label=joint_name)
+        plt.title(my_KinectRecording._part_id + ' ' + _movement + ' ' +  joint_name + ' ' + str(round((np.mean(Z)),3)))
+        ax.autoscale()
+        plt.show()   
+    
+    #%%
+    joint = SkeletonJoints.COM
     joint_number = joint.value
     joint_name = joint.name
+    Z = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100  
+     
+    from scipy import fftpack
+    
+    #f = 100
+    f_s = 30
+    
+    #t = np.linspace(0, 20, 30 * f_s, endpoint=False)
+    plt.plot(Z)
+    plt.title(joint_name)
+    plt.show() 
+    
+    x = fftpack.fft(Z)
+    freqs = fftpack.fftfreq(len(x)) * f_s
+    
+    fig, ax = plt.subplots()
+    
+    ax.stem(freqs, np.abs(X))
+    ax.set_xlabel('Frequency in Hertz [Hz]')
+    ax.set_ylabel('Frequency Domain (Spectrum) Magnitude')
+    ax.set_xlim(-f_s / 2, f_s / 2)
+    #ax.set_ylim(-5, 110)
+    
+    
+    
+    #%%
+    
+    Zr = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100 
+    Z = my_KinectRecording.stacked_raw_XYZ_values_filtered[2, joint_number, :]*100
+    b = np.abs(X)
+    Zr_ep = round(stats.entropy(Zr, base=2),2)
+    Z_ep = round(stats.entropy(Z, base=2),2)
+    freqs_ep = round(stats.entropy(b, base=2),2)
+    print(joint_name)
+    print(Zr_ep, Z_ep, freqs_ep)
+    
+    #%%
+    print(_part_id)
+    
+    #%%
+    #from mayavi import mlab
+    #mlab.points3d(X, Y, Z, scale_factor=0.06, color=(0,0,0))
+    
+    
+    #%%
+    
+    for joint in HierarchicalSkeletonJoints:
+        res_x = []
+        res_y = []
+        res_z = []
+        
+        fc_x = []
+        fc_y = []
+        fc_z = []
+        
+        Hzs = list(range(5,30)) #[5,10,15,20,25,30]
+        for Hz in Hzs:
+            joint_number = joint.value
+            joint_name = joint.name
+            Xr = my_KinectRecording.stacked_raw_XYZ_values[0, joint_number, :]*100
+            Yr = my_KinectRecording.stacked_raw_XYZ_values[1, joint_number, :]*100
+            Zr = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100
+            
+            X, Y, Z = sm.filter_signal(Xr,
+                                       Yr,
+                                       Zr,
+                                       N=2,
+                                       fc=Hz)
+            
+            _res_x = round(np.sqrt(np.sum(np.square(np.subtract(Xr,X)))), 3)
+            res_x.append(_res_x)
+            fc_x.append(round((0.06 * Hz) - (0.000022 * (Hz**2)) + (5.95 + _res_x), 3))
+                    
+            _res_y = round(np.sqrt(np.sum(np.square(np.subtract(Yr,Y)))), 3)
+            res_y.append(_res_y)
+            fc_y.append(round((0.06 * Hz) - (0.000022 * (Hz**2)) + (5.95 + _res_y), 3))
+            
+            _res_z = round(np.sqrt(np.sum(np.square(np.subtract(Zr,Z)))), 3)
+            res_z.append(_res_z)
+            fc_z.append(round((0.06 * Hz) - (0.000022 * (Hz**2)) + (5.95 + _res_z), 3))
+            
+        plt.plot(Hzs, res_x, label='res x', marker='x')
+        #plt.title(joint_name)
+        #plt.legend()
+        #plt.show()
+        
+        
+        
+        plt.plot(Hzs, res_y, label='res y', marker='o')
+        #plt.title(joint_name)
+        #plt.legend()
+        #plt.show()
+        
+        plt.plot(Hzs, res_z, label='res z', marker='s')
+        plt.title(joint_name)
+        plt.legend()
+        plt.xlabel('freqency')
+        plt.ylabel('residual (mm)')
+        plt.show()
+        
+        print('X cuttoff freq', round(np.mean(fc_x), 1))
+        print('X cuttoff freq', round(np.mean(fc_y), 1))
+        print('X cuttoff freq', round(np.mean(fc_z), 1))
+        
+    #%%
+    
+    #from __future__ import division
+    #import numpy as np
+    #import matplotlib.pyplot as plt
+    
+    #data = np.random.rand(301) - 0.5
+    joint_number = HierarchicalSkeletonJoints.COM.value
+    
+    Xr = my_KinectRecording.stacked_raw_XYZ_values[0, joint_number, :]*100
+    Yr = my_KinectRecording.stacked_raw_XYZ_values[1, joint_number, :]*100
+    Zr = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100
+    
     X = my_KinectRecording.stacked_raw_XYZ_values_filtered[0, joint_number, :]*100
     Y = my_KinectRecording.stacked_raw_XYZ_values_filtered[1, joint_number, :]*100
     Z = my_KinectRecording.stacked_raw_XYZ_values_filtered[2, joint_number, :]*100
+            
+    sig = X
+    fs = 30
+    from scipy import signal
+    freqs, times, spectrogram = signal.spectrogram(sig)
     
-#    fig = plt.figure(figsize=(10, 10))
-#    ax = fig.add_subplot(111, projection='3d')
-#    ax.set_xlabel('X')
-#    ax.set_ylabel('Y')
-#    ax.set_zlabel('Z')
-#    ax.view_init(elev=90, azim=-90)
-#
-#    ax.scatter(Xr, Yr, Zr, color='k', marker='o', label=joint_name)
-#    plt.title(my_KinectRecording._part_id + ' ' + _movement + ' ' +  joint_name + ' ' + str(round((np.mean(Z)),3)))
-#    ax.autoscale()
-#    plt.show()
+    #plt.figure(figsize=(5, 4))
+    #plt.imshow(spectrogram, aspect='auto', cmap='hot_r', origin='lower')
+    #plt.title('Spectrogram')
+    #plt.ylabel('Frequency band')
+    #plt.xlabel('Time window')
+    #plt.tight_layout()
     
+    freqs, psd = signal.welch(sig, fs, scaling='density')
     
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.view_init(elev=90, azim=-90)
-
-    ax.scatter(X, Y, Z, color='k', marker='o', label=joint_name)
-    plt.title(my_KinectRecording._part_id + ' ' + _movement + ' ' +  joint_name + ' ' + str(round((np.mean(Z)),3)))
-    ax.autoscale()
-    plt.show()   
-
-#%%
-joint = SkeletonJoints.COM
-joint_number = joint.value
-joint_name = joint.name
-Z = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100  
- 
-from scipy import fftpack
-
-#f = 100
-f_s = 30
-
-#t = np.linspace(0, 20, 30 * f_s, endpoint=False)
-plt.plot(Z)
-plt.title(joint_name)
-plt.show() 
-
-x = fftpack.fft(Z)
-freqs = fftpack.fftfreq(len(x)) * f_s
-
-fig, ax = plt.subplots()
-
-ax.stem(freqs, np.abs(X))
-ax.set_xlabel('Frequency in Hertz [Hz]')
-ax.set_ylabel('Frequency Domain (Spectrum) Magnitude')
-ax.set_xlim(-f_s / 2, f_s / 2)
-#ax.set_ylim(-5, 110)
-
-
-
-#%%
-
-Zr = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100 
-Z = my_KinectRecording.stacked_raw_XYZ_values_filtered[2, joint_number, :]*100
-b = np.abs(X)
-Zr_ep = round(stats.entropy(Zr, base=2),2)
-Z_ep = round(stats.entropy(Z, base=2),2)
-freqs_ep = round(stats.entropy(b, base=2),2)
-print(joint_name)
-print(Zr_ep, Z_ep, freqs_ep)
-
-#%%
-print(_part_id)
-
-#%%
-#from mayavi import mlab
-#mlab.points3d(X, Y, Z, scale_factor=0.06, color=(0,0,0))
-
-
-#%%
-
-for joint in HierarchicalSkeletonJoints:
-    res_x = []
-    res_y = []
-    res_z = []
-    
-    fc_x = []
-    fc_y = []
-    fc_z = []
-    
-    Hzs = list(range(5,30)) #[5,10,15,20,25,30]
-    for Hz in Hzs:
-        joint_number = joint.value
-        joint_name = joint.name
-        Xr = my_KinectRecording.stacked_raw_XYZ_values[0, joint_number, :]*100
-        Yr = my_KinectRecording.stacked_raw_XYZ_values[1, joint_number, :]*100
-        Zr = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100
-        
-        X, Y, Z = sm.filter_signal(Xr,
-                                   Yr,
-                                   Zr,
-                                   N=2,
-                                   fc=Hz)
-        
-        _res_x = round(np.sqrt(np.sum(np.square(np.subtract(Xr,X)))), 3)
-        res_x.append(_res_x)
-        fc_x.append(round((0.06 * Hz) - (0.000022 * (Hz**2)) + (5.95 + _res_x), 3))
-                
-        _res_y = round(np.sqrt(np.sum(np.square(np.subtract(Yr,Y)))), 3)
-        res_y.append(_res_y)
-        fc_y.append(round((0.06 * Hz) - (0.000022 * (Hz**2)) + (5.95 + _res_y), 3))
-        
-        _res_z = round(np.sqrt(np.sum(np.square(np.subtract(Zr,Z)))), 3)
-        res_z.append(_res_z)
-        fc_z.append(round((0.06 * Hz) - (0.000022 * (Hz**2)) + (5.95 + _res_z), 3))
-        
-    plt.plot(Hzs, res_x, label='res x', marker='x')
-    #plt.title(joint_name)
-    #plt.legend()
-    #plt.show()
-    
-    
-    
-    plt.plot(Hzs, res_y, label='res y', marker='o')
-    #plt.title(joint_name)
-    #plt.legend()
-    #plt.show()
-    
-    plt.plot(Hzs, res_z, label='res z', marker='s')
-    plt.title(joint_name)
-    plt.legend()
-    plt.xlabel('freqency')
-    plt.ylabel('residual (mm)')
+    plt.semilogx(freqs, psd)
+    plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
+    plt.xlabel('Frequency')
+    plt.ylabel('Power')
+    plt.tight_layout()
     plt.show()
     
-    print('X cuttoff freq', round(np.mean(fc_x), 1))
-    print('X cuttoff freq', round(np.mean(fc_y), 1))
-    print('X cuttoff freq', round(np.mean(fc_z), 1))
+    print('Max peak feq:', psd.max())
     
-#%%
-
-#from __future__ import division
-#import numpy as np
-#import matplotlib.pyplot as plt
-
-#data = np.random.rand(301) - 0.5
-joint_number = HierarchicalSkeletonJoints.COM.value
-
-Xr = my_KinectRecording.stacked_raw_XYZ_values[0, joint_number, :]*100
-Yr = my_KinectRecording.stacked_raw_XYZ_values[1, joint_number, :]*100
-Zr = my_KinectRecording.stacked_raw_XYZ_values[2, joint_number, :]*100
-
-X = my_KinectRecording.stacked_raw_XYZ_values_filtered[0, joint_number, :]*100
-Y = my_KinectRecording.stacked_raw_XYZ_values_filtered[1, joint_number, :]*100
-Z = my_KinectRecording.stacked_raw_XYZ_values_filtered[2, joint_number, :]*100
-        
-sig = X
-fs = 30
-from scipy import signal
-freqs, times, spectrogram = signal.spectrogram(sig)
-
-#plt.figure(figsize=(5, 4))
-#plt.imshow(spectrogram, aspect='auto', cmap='hot_r', origin='lower')
-#plt.title('Spectrogram')
-#plt.ylabel('Frequency band')
-#plt.xlabel('Time window')
-#plt.tight_layout()
-
-freqs, psd = signal.welch(sig, fs, scaling='density')
-
-plt.semilogx(freqs, psd)
-plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-plt.xlabel('Frequency')
-plt.ylabel('Power')
-plt.tight_layout()
-plt.show()
-
-print('Max peak feq:', psd.max())
-
-#freqs, psd = signal.welch(sig, fs, scaling='spectrum')
-#
-#plt.semilogx(freqs, psd)
-#plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-#plt.xlabel('Frequency')
-#plt.ylabel('Power')
-#plt.tight_layout()
-#plt.show()
-#
-#print('Max peak feq:', psd.max())
-
-#ps = np.abs(np.fft.fft(data))**2
-#
-#time_step = 1 / 30
-#freqs = np.fft.fftfreq(data.size, time_step)
-#idx = np.argsort(freqs)
-#
-#plt.plot(freqs[idx], ps[idx])    
-
-#%%
-
-f, Pxx_den = signal.welch(sig, fs) #, nperseg=1024)
-plt.semilogy(f, Pxx_den)
-#plt.ylim([0.5e-3, 1])
-plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-plt.xlabel('frequency [Hz]')
-plt.ylabel('PSD [V**2/Hz]')
-plt.show()
-
-#%%
-f, Pxx_spec = signal.welch(sig, fs, 'flattop', 1024, scaling='spectrum')
-plt.figure()
-plt.semilogy(f, np.sqrt(Pxx_spec))
-plt.xlabel('frequency [Hz]')
-plt.ylabel('Linear spectrum [V RMS]')
-plt.show()
-print('Max peak feq:', np.sqrt(Pxx_spec.max()))
-
-#%%
-plt.plot(sig)
-plt.show()
-
-plt.psd(sig)
-plt.show()
-
-plt.psd(sig, Fs=fs)
-plt.show()
-
-#%%
-from scipy.fftpack import fft
-
-d = 20
-t = np.arange(0,d,1/fs)
-a = np.sin(2*np.pi*20*t)
-
-a = sig
-plt.plot(a)
-plt.show()
-
-#spectrum
-X_f = fft(a)
-plt.plot(np.abs(X_f))
-plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-plt.show()
-print('mean feq:', np.mean(np.abs(X_f)))
-
-#frequencys
-n = np.size(a)
-fr = (fs/2) * np.linspace(0,1,round(n/2))
-X_m =  (2/n) * abs(X_f[0 : np.size(fr)])
-
-plt.semilogy(fr, X_m)
-plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-plt.show()
-
-#%%
-import numpy.fft as fft
-spectrum = fft.fft(sig)
-abs_spec = spectrum.abs
-#You can then plot the magnitudes of the FFT as
-
-freq = fft.fftfreq(len(abs_spec))
-plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-plt.plot(freq)
-plt.show()
-
-plt.plot(freq, abs_spec)
-plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-#plt.xlim(-0.01, 0.01)
-plt.show()
-
-#print('mean:', round(np.mean(freq),3))
-print('SD:', round(np.std(freq),3))
-
-
-
+    #freqs, psd = signal.welch(sig, fs, scaling='spectrum')
+    #
+    #plt.semilogx(freqs, psd)
+    #plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
+    #plt.xlabel('Frequency')
+    #plt.ylabel('Power')
+    #plt.tight_layout()
+    #plt.show()
+    #
+    #print('Max peak feq:', psd.max())
+    
+    #ps = np.abs(np.fft.fft(data))**2
+    #
+    #time_step = 1 / 30
+    #freqs = np.fft.fftfreq(data.size, time_step)
+    #idx = np.argsort(freqs)
+    #
+    #plt.plot(freqs[idx], ps[idx])    
+    
+    #%%
+    
+    f, Pxx_den = signal.welch(sig, fs) #, nperseg=1024)
+    plt.semilogy(f, Pxx_den)
+    #plt.ylim([0.5e-3, 1])
+    plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
+    plt.xlabel('frequency [Hz]')
+    plt.ylabel('PSD [V**2/Hz]')
+    plt.show()
+    
+    #%%
+    f, Pxx_spec = signal.welch(sig, fs, 'flattop', 1024, scaling='spectrum')
+    plt.figure()
+    plt.semilogy(f, np.sqrt(Pxx_spec))
+    plt.xlabel('frequency [Hz]')
+    plt.ylabel('Linear spectrum [V RMS]')
+    plt.show()
+    print('Max peak feq:', np.sqrt(Pxx_spec.max()))
+    
+    #%%
+    plt.plot(sig)
+    plt.show()
+    
+    plt.psd(sig)
+    plt.show()
+    
+    plt.psd(sig, Fs=fs)
+    plt.show()
+    
+    #%%
+    from scipy.fftpack import fft
+    
+    d = 20
+    t = np.arange(0,d,1/fs)
+    a = np.sin(2*np.pi*20*t)
+    
+    a = sig
+    plt.plot(a)
+    plt.show()
+    
+    #spectrum
+    X_f = fft(a)
+    plt.plot(np.abs(X_f))
+    plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
+    plt.show()
+    print('mean feq:', np.mean(np.abs(X_f)))
+    
+    #frequencys
+    n = np.size(a)
+    fr = (fs/2) * np.linspace(0,1,round(n/2))
+    X_m =  (2/n) * abs(X_f[0 : np.size(fr)])
+    
+    plt.semilogy(fr, X_m)
+    plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
+    plt.show()
+    
+    #%%
+    import numpy.fft as fft
+    spectrum = fft.fft(sig)
+    abs_spec = spectrum.abs
+    #You can then plot the magnitudes of the FFT as
+    
+    freq = fft.fftfreq(len(abs_spec))
+    plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
+    plt.plot(freq)
+    plt.show()
+    
+    plt.plot(freq, abs_spec)
+    plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
+    #plt.xlim(-0.01, 0.01)
+    plt.show()
+    
+    #print('mean:', round(np.mean(freq),3))
+    print('SD:', round(np.std(freq),3))
+    
+    
+    
