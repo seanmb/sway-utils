@@ -191,7 +191,23 @@ def euclidean_distance_between_joints(j1, j2):
     #ed = np.sqrt(0 + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
     
     return ed
-    
+
+def get_joint_XYZ(skel_frame_row):
+    x = float(skel_frame_row[2])
+    y = float(skel_frame_row[3])
+    z = float(skel_frame_row[4])
+
+    return [x, y, z]
+
+def mean_twin_joint_pos(j_l, j_r):
+    mean_x = np.mean([j_l[0], j_r[0]])
+    mean_y = np.mean([j_l[1], j_r[1]])
+    mean_z = np.mean([j_l[2], j_r[2]])
+
+    floor = [mean_x, mean_y, mean_z] # this is the floor if you pass in feat
+
+    return floor
+
 
 def get_angle_between_three_joints_old(j1, j2, j3):
     
@@ -225,7 +241,7 @@ def get_angle_between_three_joints_by_matirx(j1, j2, j3):
     #deg_between_three_joints = np.degrees(rad_between_three_joints)
     
     rad_between_three_joints2 = np.arccos(np.clip(np.dot(v_j1_To_j2_u, v_j2_To_j3_u), -1.0, 1.0))
-    deg_between_three_joints2 = np.degrees(rad_between_three_joints2)
+    deg_between_three_joints2 = 180 - np.degrees(rad_between_three_joints2)
     
     return deg_between_three_joints2
 
@@ -242,7 +258,6 @@ def get_angle_between_three_joints(j1, j2, j3):
     
     return angle_C
 
-
 def get_AP_angle_between_three_joints(j1, j2, j3):
     
     l1 =  np.sqrt(np.square(j1[2] - j2[2]))
@@ -252,7 +267,7 @@ def get_AP_angle_between_three_joints(j1, j2, j3):
     deg_between_three_joints = np.degrees(rad_between_three_joints) 
     
     return deg_between_three_joints
-    
+
 #%%
 def get_unique_values(full_list):
     '''

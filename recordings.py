@@ -144,6 +144,7 @@ class KinectRecording:
     _dataset_prefix = ''
     _movement = ''
     _part_id = 0
+    _labels = []
     _ref_spine_base = [] #spine base of first skel frame
     _ref_skel_frame = [] #whole      of first skel frame
     
@@ -182,12 +183,13 @@ class KinectRecording:
     stacked_filtered_angle_vlaues = []
 
     
-    def __init__(self, skel_root_path, dataset_prefix, movement, part_id):
+    def __init__(self, skel_root_path, dataset_prefix, movement, part_id, labels=[]):
         self._root_path = str.replace(skel_root_path, '/skel', '')
         self._dataset_prefix = dataset_prefix
         self._skel_root_path = skel_root_path
         self._movement = movement
         self._part_id = part_id
+        self._labels = labels
         
         self.load_skeletons(skel_root_path)
         
@@ -530,6 +532,10 @@ class KinectRecording:
                                     hip_angle_left,
                                     hip_angle_right])
             
+            if len(self._labels) != 0: 
+                arr_labels = np.array(self._labels)[0]
+                angles_row = np.concatenate((angles_row, arr_labels))
+            
             angles_list.append(angles_row)
         
         return np.array(angles_list)
@@ -704,6 +710,18 @@ if __name__ == "__main__":
     #_movement = 'Ramp-Quiet-Standing-Eyes-Closed'
     _skel_root_path = '/media/55129822/Kinect Database/SPPB/SPPB' + _part_id + '/SPPB'+ _part_id +'_'+ _movement +'/skel'   
  
+    headers = ['PART_ID',
+               'BODY_COM_ANGLE',
+               'BODY_LEAN_ANGLE',
+               'KNEELEFT_ANGLE',
+               'KNEERIGHT_ANGLE',
+               'HIPLEFT_ANGLE',
+               'HIPRIGHT_ANGLE',
+               'impairment_confedence',
+               'impairment_self', 
+               'impairment_clinical',
+               'impairment_stats']
+    
     """ Create Register """
     _dataset_prefix = 'SPPB'
     register_file = os.path.abspath('../Kinect-Faller-Detection/Data/RecordingsRegister2.xlsx')
@@ -722,7 +740,7 @@ if __name__ == "__main__":
         
     dataset_roots, part_dirs = get_part_dirs(register)
     
-    all_Stacked_filtered_angle_vlaues = []
+    all_Stacked_filtered_angle_vlaues = [] headers
     for _part_id in part_dirs: #tqdm(part_dirs):
         #_part_id = 'SPPB11'
         print('\n', _part_id ,'\n')
@@ -734,7 +752,12 @@ if __name__ == "__main__":
         if len(skel_files) != 0:
             #Create Recording opbject
             _int_part_id = int(re.search(r'\d+', _part_id).group())
-            kinect_recording = KinectRecording(_skel_root_path, _dataset_prefix, _movement, _int_part_id)
+            #create kinectRecording obj
+            label_columns = ['impairment_confedence', 'impairment_self', 
+                             'impairment_clinical','impairment_stats']
+            labels = register[register['part_id'] == _part_id][label_columns]
+            kinect_recording = KinectRecording(_skel_root_path, _dataset_prefix, _movement, _int_part_id, labels=labels)
+        
         
             if len(all_Stacked_filtered_angle_vlaues) == 0:
                 all_Stacked_filtered_angle_vlaues = kinect_recording.stacked_filtered_angle_vlaues
@@ -742,47 +765,43 @@ if __name__ == "__main__":
                 all_Stacked_filtered_angle_vlaues = np.vstack([all_Stacked_filtered_angle_vlaues, kinect_recording.stacked_filtered_angle_vlaues])
     
     #save csv file of angles
-    np.savetxt('all_' + _movement + '_angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
+    np.savetxt('All_' + _movement + '_Angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
     
 #%% 
     #my_Stacked_filtered_angle_vlaues = my_KinectRecording.stacked_filtered_angle_vlaues
     
     #pd_all_Stacked_filtered_angle_vlaues
     
-    columns = ['PART_ID',
-               'BODY_COM_ANGLE',
-               'BODY_LEAN_ANGLE',
-               'KNEELEFT_ANGLE',
-               'KNEERIGHT_ANGLE',
-               'HIPLEFT_ANGLE',
-               'HIPRIGHT_ANGLE']
     
-    pd_all_Stacked_filtered_angle_vlaues = pd.DataFrame(all_Stacked_filtered_angle_vlaues, columns=columns)
+    
+    pd_all_Stacked_filtered_angle_vlaues = pd.DataFrame(all_Stacked_filtered_angle_vlaues, columns=headers)
     #pd_all_Stacked_filtered_angle_vlaues.set_index('PART_ID')
+    
+    
 
 #%%
     
     #all_Stacked_filtered_angle_vlaues = np.array(np_filtered_angle_vlaues)
-    part_id = 2
+    part_id = 315
     tmp_recording = pd_all_Stacked_filtered_angle_vlaues[pd_all_Stacked_filtered_angle_vlaues['PART_ID'] == part_id]
     recording = np.array(tmp_recording)
 
-    plt.plot(recording[:,SkeletonJointAngles.BODY_COM_ANGLE.value], label='BODY_COM_ANGLE')
-    plt.plot(recording[:,SkeletonJointAngles.BODY_LEAN_ANGLE.value], label='BODY_LEAN_ANGLE')
+    plt.plot(recording[:,SkeletonJointAngles.BODY_COM_ANGLE.value], label='Torso CoM angle')
+    plt.plot(recording[:,SkeletonJointAngles.BODY_LEAN_ANGLE.value], label='Torso lean angle')
     #plt.ylim(78, 90)
     plt.title(part_id)
     plt.legend()
     plt.show()
     
-    plt.plot(recording[:,SkeletonJointAngles.HIPLEFT_ANGLE.value], label='HIPLEFT_ANGLE')
-    plt.plot(recording[:,SkeletonJointAngles.HIPRIGHT_ANGLE.value], label='HIPRIGHT_ANGLE')
+    plt.plot(recording[:,SkeletonJointAngles.HIPLEFT_ANGLE.value], label='Hip left angle')
+    plt.plot(recording[:,SkeletonJointAngles.HIPRIGHT_ANGLE.value], label='Hip right angle')
     #plt.ylim(78, 90)
     plt.title(part_id)
     plt.legend()
     plt.show()
     
-    plt.plot(recording[:,SkeletonJointAngles.KNEELEFT_ANGLE.value], label='KNEELEFT_ANGLE')
-    plt.plot(recording[:,SkeletonJointAngles.KNEERIGHT_ANGLE.value], label='KNEERIGHT_ANGLE')
+    plt.plot(recording[:,SkeletonJointAngles.KNEELEFT_ANGLE.value], label='Knee left angle')
+    plt.plot(recording[:,SkeletonJointAngles.KNEERIGHT_ANGLE.value], label='Knee right angle')
     plt.legend()
     plt.title(part_id)
     plt.show()
