@@ -113,6 +113,12 @@ class SkeletonJointAngles(Enum):
     KNEERIGHT_ANGLE = 4
     HIPLEFT_ANGLE = 5
     HIPRIGHT_ANGLE = 6
+    ELBOWLEFT_ANGLE = 7
+    ELBOWLRIGHT_ANGLE = 8
+    ARMPITLEFT_ANGLE = 9
+    ARMPITROIGHT_ANGLE = 10
+    ANKLELEFT_ANGLE = 11
+    ANKLELRIGHT_ANGLE = 12
     
     
     def get_joint_from_skel_frame(skel_frame_row):
@@ -185,6 +191,7 @@ class KinectRecording:
     
     def __init__(self, skel_root_path, dataset_prefix, movement, part_id, labels=[]):
         self._root_path = str.replace(skel_root_path, '/skel', '')
+        self._root_path = str.replace(self._root_path, '\skel', '')
         self._dataset_prefix = dataset_prefix
         self._skel_root_path = skel_root_path
         self._movement = movement
@@ -202,7 +209,7 @@ class KinectRecording:
     
     def load_skeletons(self, skel_root_path):
         #If chahed file exists, load
-        cached_stacked_raw_XYZ_file_name = (self._dataset_prefix + 
+        cached_stacked_raw_XYZ_file_name = (self._dataset_prefix +
                                             str(self._part_id) + '_' +
                                             'cached_stacked_raw_XYZ_' + 
                                             self._movement + '.npy')    
@@ -213,13 +220,16 @@ class KinectRecording:
         if os.path.exists(self._cached_stacked_raw_XYZ_file_path):
             self.stacked_raw_XYZ_values = np.load(self._cached_stacked_raw_XYZ_file_path)
             self._load_from_cache = True
+            print('loading', self._cached_stacked_raw_XYZ_file_path)
         
         #else calulate stuff
         else:
             root, dirs, skel_files = ul.walkFileSystem(skel_root_path)
             skel_files.sort()
             
-            
+            if len(skel_files) == 0:
+                print('Skel files for:', self._cached_stacked_raw_XYZ_file_path)
+         
             for skelfile in tqdm(skel_files):
             #for skelfile in skel_files:    
                 skel_file_path = os.path.join(root, skelfile)
@@ -438,10 +448,28 @@ class KinectRecording:
                                                  stacked_filtered_XYZ_values[Z][SkeletonJoints.SPINESHOULDER.value][i]])
             
             tmp_com_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.COM.value][i],
-                                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.COM.value][i],
-                                                 stacked_filtered_XYZ_values[Z][SkeletonJoints.COM.value][i]])
+                                      stacked_filtered_XYZ_values[Y][SkeletonJoints.COM.value][i],
+                                      stacked_filtered_XYZ_values[Z][SkeletonJoints.COM.value][i]])
             
-                
+           
+            tmp_elbow_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.ELBOWLEFT.value][i],
+                                             stacked_filtered_XYZ_values[Y][SkeletonJoints.ELBOWLEFT.value][i],
+                                             stacked_filtered_XYZ_values[Z][SkeletonJoints.ELBOWLEFT.value][i]])
+                    
+            tmp_elbow_right_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.ELBOWRIGHT.value][i],
+                                              stacked_filtered_XYZ_values[Y][SkeletonJoints.ELBOWRIGHT.value][i],
+                                              stacked_filtered_XYZ_values[Z][SkeletonJoints.ELBOWRIGHT.value][i]])
+            
+            tmp_wrist_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.WRISTLEFT.value][i],
+                                             stacked_filtered_XYZ_values[Y][SkeletonJoints.WRISTLEFT.value][i],
+                                             stacked_filtered_XYZ_values[Z][SkeletonJoints.WRISTLEFT.value][i]])
+                    
+            tmp_wrist_right_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.WRISTRIGHT.value][i],
+                                              stacked_filtered_XYZ_values[Y][SkeletonJoints.WRISTRIGHT.value][i],
+                                              stacked_filtered_XYZ_values[Z][SkeletonJoints.WRISTRIGHT.value][i]])
+            
+            
+            
             tmp_hip_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.HIPLEFT.value][i],
                                  stacked_filtered_XYZ_values[Y][SkeletonJoints.HIPLEFT.value][i],
                                  stacked_filtered_XYZ_values[Z][SkeletonJoints.HIPLEFT.value][i]])
@@ -470,9 +498,9 @@ class KinectRecording:
                                  stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTLEFT.value][i],
                                  stacked_filtered_XYZ_values[Z][SkeletonJoints.FOOTLEFT.value][i]])
             
-            tmp_foot_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.FOOTRIGHT.value][i],
-                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTLEFT.value][i],
-                                 stacked_filtered_XYZ_values[Z][SkeletonJoints.FOOTLEFT.value][i]])
+            tmp_foot_right_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.FOOTRIGHT.value][i],
+                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTRIGHT.value][i],
+                                 stacked_filtered_XYZ_values[Z][SkeletonJoints.FOOTRIGHT.value][i]])
             
             # tmp_foot_mean_joint = sm.mean_twin_joint_pos(tmp_foot_left_joint,
             #                                               tmp_foot_left_joint)
@@ -503,9 +531,38 @@ class KinectRecording:
                                                                tmp_knee_left_joint)
             
             hip_angle_right = sm.get_angle_between_three_joints(tmp_shoulder_right_joint, 
-                                                               tmp_hip_right_joint,            
-                                                               tmp_knee_right_joint)
+                                                                tmp_hip_right_joint,            
+                                                                tmp_knee_right_joint)
             
+            
+            
+            elbow_angle_left = sm.get_angle_between_three_joints(tmp_shoulder_left_joint,
+                                                                 tmp_elbow_left_joint,            
+                                                                 tmp_wrist_left_joint)
+            
+            elbow_angle_right = sm.get_angle_between_three_joints(tmp_shoulder_right_joint,
+                                                                  tmp_elbow_right_joint,            
+                                                                  tmp_wrist_right_joint)
+                        
+            
+            
+            armpit_angle_left = sm.get_angle_between_three_joints(tmp_hip_left_joint,
+                                                                  tmp_shoulder_left_joint,            
+                                                                  tmp_elbow_left_joint)
+            
+            armpit_angle_right = sm.get_angle_between_three_joints(tmp_hip_right_joint,
+                                                                   tmp_shoulder_right_joint,            
+                                                                   tmp_elbow_right_joint)
+            
+            ankle_angle_left = sm.get_angle_between_three_joints(tmp_foot_left_joint,
+                                                                  tmp_ankle_left_joint,            
+                                                                  tmp_knee_left_joint)
+            
+            ankle_angle_right = sm.get_angle_between_three_joints(tmp_foot_right_joint,
+                                                                  tmp_ankle_right_joint,            
+                                                                  tmp_knee_right_joint)
+            
+        
         
             # knee_angle_left.append(360 - sm.get_angle_between_three_joints(hip_left, knee_left, ankle_left))
             # knee_angle_right.append(360 - sm.get_angle_between_three_joints(hip_right, knee_right, ankle_right))
@@ -516,12 +573,18 @@ class KinectRecording:
             # hip_angle_mean.append(sm.get_angle_between_three_joints(spine_shoulder, hip_mean, knee_mean))
                   
             '''                    
-                BODY_COM_ANGLE = 0
-                BODY_LEAN_ANGLE = 1
-                KNEELEFT_ANGLE = 2
-                KNEERIGHT_ANGLE = 3
-                HIPLEFT_ANGLE = 4
-                HIPRIGHT_ANGLE = 5
+                BODY_COM_ANGLE = 1
+                BODY_LEAN_ANGLE = 2
+                KNEELEFT_ANGLE = 3
+                KNEERIGHT_ANGLE = 4
+                HIPLEFT_ANGLE = 5
+                HIPRIGHT_ANGLE = 6
+                ELBOWLEFT_ANGLE = 7
+                ELBOWLEFT_ANGLE = 8
+                ARMPITLEFT_ANGLE = 9
+                ARMPITLEFT_ANGLE = 10
+                ANKLELEFT_ANGLE = 11
+                ANKLELRIGHT_ANGLE = 12
             '''
             
             angles_row = np.hstack([self._part_id,
@@ -530,7 +593,13 @@ class KinectRecording:
                                     knee_angle_left,
                                     knee_angle_right,
                                     hip_angle_left,
-                                    hip_angle_right])
+                                    hip_angle_right,
+                                    elbow_angle_left,
+                                    elbow_angle_right,
+                                    armpit_angle_left,
+                                    armpit_angle_right,
+                                    ankle_angle_left,
+                                    ankle_angle_right])
             
             if len(self._labels) != 0: 
                 arr_labels = np.array(self._labels)[0]
@@ -541,118 +610,118 @@ class KinectRecording:
         return np.array(angles_list)
     
     
-    def calulate_skeleton_angles(self, skel_frame):
-        angles_list = []
+    # def calulate_skeleton_angles(self, skel_frame): #not used anymore
+    #     angles_list = []
         
-        tmp_shoulder_left_joint = np.stack([skel_frame['X'][SkeletonJoints.SHOULDERLEFT.value],
-                                            skel_frame['Y'][SkeletonJoints.SHOULDERLEFT.value],
-                                            skel_frame['Z'][SkeletonJoints.SHOULDERLEFT.value]])
+    #     tmp_shoulder_left_joint = np.stack([skel_frame['X'][SkeletonJoints.SHOULDERLEFT.value],
+    #                                         skel_frame['Y'][SkeletonJoints.SHOULDERLEFT.value],
+    #                                         skel_frame['Z'][SkeletonJoints.SHOULDERLEFT.value]])
         
-        tmp_shoulder_right_joint = np.stack([skel_frame['X'][SkeletonJoints.SHOULDERRIGHT.value],
-                                             skel_frame['Y'][SkeletonJoints.SHOULDERRIGHT.value],
-                                             skel_frame['Z'][SkeletonJoints.SHOULDERRIGHT.value]])
+    #     tmp_shoulder_right_joint = np.stack([skel_frame['X'][SkeletonJoints.SHOULDERRIGHT.value],
+    #                                          skel_frame['Y'][SkeletonJoints.SHOULDERRIGHT.value],
+    #                                          skel_frame['Z'][SkeletonJoints.SHOULDERRIGHT.value]])
         
-        tmp_spine_shoulder_joint = np.stack([skel_frame['X'][SkeletonJoints.SPINESHOULDER.value],
-                                             skel_frame['Y'][SkeletonJoints.SPINESHOULDER.value],
-                                             skel_frame['Z'][SkeletonJoints.SPINESHOULDER.value]])
+    #     tmp_spine_shoulder_joint = np.stack([skel_frame['X'][SkeletonJoints.SPINESHOULDER.value],
+    #                                          skel_frame['Y'][SkeletonJoints.SPINESHOULDER.value],
+    #                                          skel_frame['Z'][SkeletonJoints.SPINESHOULDER.value]])
         
-        tmp_com_joint = np.stack([skel_frame['X'][SkeletonJoints.COM.value],
-                                             skel_frame['Y'][SkeletonJoints.COM.value],
-                                             skel_frame['Z'][SkeletonJoints.COM.value]])
+    #     tmp_com_joint = np.stack([skel_frame['X'][SkeletonJoints.COM.value],
+    #                                          skel_frame['Y'][SkeletonJoints.COM.value],
+    #                                          skel_frame['Z'][SkeletonJoints.COM.value]])
         
             
-        tmp_hip_left_joint = np.stack([skel_frame['X'][SkeletonJoints.HIPLEFT.value],
-                             skel_frame['Y'][SkeletonJoints.HIPLEFT.value],
-                             skel_frame['Z'][SkeletonJoints.HIPLEFT.value]])
+    #     tmp_hip_left_joint = np.stack([skel_frame['X'][SkeletonJoints.HIPLEFT.value],
+    #                          skel_frame['Y'][SkeletonJoints.HIPLEFT.value],
+    #                          skel_frame['Z'][SkeletonJoints.HIPLEFT.value]])
         
-        tmp_hip_right_joint = np.stack([skel_frame['X'][SkeletonJoints.HIPRIGHT.value],
-                              skel_frame['Y'][SkeletonJoints.HIPRIGHT.value],
-                              skel_frame['Z'][SkeletonJoints.HIPRIGHT.value]])
+    #     tmp_hip_right_joint = np.stack([skel_frame['X'][SkeletonJoints.HIPRIGHT.value],
+    #                           skel_frame['Y'][SkeletonJoints.HIPRIGHT.value],
+    #                           skel_frame['Z'][SkeletonJoints.HIPRIGHT.value]])
         
-        tmp_knee_left_joint = np.stack([skel_frame['X'][SkeletonJoints.KNEELEFT.value],
-                             skel_frame['Y'][SkeletonJoints.KNEELEFT.value],
-                             skel_frame['Z'][SkeletonJoints.KNEELEFT.value]])
+    #     tmp_knee_left_joint = np.stack([skel_frame['X'][SkeletonJoints.KNEELEFT.value],
+    #                          skel_frame['Y'][SkeletonJoints.KNEELEFT.value],
+    #                          skel_frame['Z'][SkeletonJoints.KNEELEFT.value]])
         
-        tmp_knee_right_joint = np.stack([skel_frame['X'][SkeletonJoints.KNEERIGHT.value],
-                             skel_frame['Y'][SkeletonJoints.KNEERIGHT.value],
-                             skel_frame['Z'][SkeletonJoints.KNEERIGHT.value]])
+    #     tmp_knee_right_joint = np.stack([skel_frame['X'][SkeletonJoints.KNEERIGHT.value],
+    #                          skel_frame['Y'][SkeletonJoints.KNEERIGHT.value],
+    #                          skel_frame['Z'][SkeletonJoints.KNEERIGHT.value]])
         
-        tmp_ankle_left_joint = np.stack([skel_frame['X'][SkeletonJoints.ANKLELEFT.value],
-                             skel_frame['Y'][SkeletonJoints.ANKLELEFT.value],
-                             skel_frame['Z'][SkeletonJoints.ANKLELEFT.value]])
+    #     tmp_ankle_left_joint = np.stack([skel_frame['X'][SkeletonJoints.ANKLELEFT.value],
+    #                          skel_frame['Y'][SkeletonJoints.ANKLELEFT.value],
+    #                          skel_frame['Z'][SkeletonJoints.ANKLELEFT.value]])
         
-        tmp_ankle_right_joint = np.stack([skel_frame['X'][SkeletonJoints.ANKLERIGHT.value],
-                             skel_frame['Y'][SkeletonJoints.ANKLERIGHT.value],
-                             skel_frame['Z'][SkeletonJoints.ANKLERIGHT.value]])
+    #     tmp_ankle_right_joint = np.stack([skel_frame['X'][SkeletonJoints.ANKLERIGHT.value],
+    #                          skel_frame['Y'][SkeletonJoints.ANKLERIGHT.value],
+    #                          skel_frame['Z'][SkeletonJoints.ANKLERIGHT.value]])
         
-        tmp_foot_left_joint = np.stack([skel_frame['X'][SkeletonJoints.FOOTLEFT.value],
-                             skel_frame['Y'][SkeletonJoints.FOOTLEFT.value],
-                             skel_frame['Z'][SkeletonJoints.FOOTLEFT.value]])
+    #     tmp_foot_left_joint = np.stack([skel_frame['X'][SkeletonJoints.FOOTLEFT.value],
+    #                          skel_frame['Y'][SkeletonJoints.FOOTLEFT.value],
+    #                          skel_frame['Z'][SkeletonJoints.FOOTLEFT.value]])
         
-        tmp_foot_left_joint = np.stack([skel_frame['X'][SkeletonJoints.FOOTRIGHT.value],
-                             skel_frame['Y'][SkeletonJoints.FOOTLEFT.value],
-                             skel_frame['Z'][SkeletonJoints.FOOTLEFT.value]])
+    #     tmp_foot_left_joint = np.stack([skel_frame['X'][SkeletonJoints.FOOTRIGHT.value],
+    #                          skel_frame['Y'][SkeletonJoints.FOOTLEFT.value],
+    #                          skel_frame['Z'][SkeletonJoints.FOOTLEFT.value]])
         
-        tmp_foot_mean_joint = sm.mean_twin_joint_pos(tmp_foot_left_joint,
-                                                     tmp_foot_left_joint)
+    #     tmp_foot_mean_joint = sm.mean_twin_joint_pos(tmp_foot_left_joint,
+    #                                                  tmp_foot_left_joint)
         
-        tmp_gound_pain = np.stack([skel_frame['X'][SkeletonJoints.COM.value],
-                                   tmp_foot_mean_joint[1],
-                                   skel_frame['Z'][SkeletonJoints.COM.value]])
+    #     tmp_gound_pain = np.stack([skel_frame['X'][SkeletonJoints.COM.value],
+    #                                tmp_foot_mean_joint[1],
+    #                                skel_frame['Z'][SkeletonJoints.COM.value]])
         
                                   
-        body_com_angle = sm.get_angle_between_three_joints(tmp_com_joint, 
-                                                           tmp_foot_mean_joint, 
-                                                           tmp_gound_pain)                          
+    #     body_com_angle = sm.get_angle_between_three_joints(tmp_com_joint, 
+    #                                                        tmp_foot_mean_joint, 
+    #                                                        tmp_gound_pain)                          
                                   
-        body_lean_angle = sm.get_angle_between_three_joints(tmp_spine_shoulder_joint, 
-                                                           tmp_foot_mean_joint, 
-                                                           tmp_gound_pain)
+    #     body_lean_angle = sm.get_angle_between_three_joints(tmp_spine_shoulder_joint, 
+    #                                                        tmp_foot_mean_joint, 
+    #                                                        tmp_gound_pain)
         
-        knee_angle_left = sm.get_angle_between_three_joints(tmp_hip_left_joint, 
-                                                            tmp_knee_left_joint,
-                                                            tmp_ankle_left_joint)
+    #     knee_angle_left = sm.get_angle_between_three_joints(tmp_hip_left_joint, 
+    #                                                         tmp_knee_left_joint,
+    #                                                         tmp_ankle_left_joint)
         
-        knee_angle_right = sm.get_angle_between_three_joints(tmp_hip_right_joint, 
-                                                             tmp_knee_right_joint,
-                                                             tmp_ankle_right_joint)
+    #     knee_angle_right = sm.get_angle_between_three_joints(tmp_hip_right_joint, 
+    #                                                          tmp_knee_right_joint,
+    #                                                          tmp_ankle_right_joint)
         
-        hip_angle_left = sm.get_angle_between_three_joints(tmp_shoulder_left_joint, 
-                                                           tmp_hip_left_joint,            
-                                                           tmp_knee_left_joint)
+    #     hip_angle_left = sm.get_angle_between_three_joints(tmp_shoulder_left_joint, 
+    #                                                        tmp_hip_left_joint,            
+    #                                                        tmp_knee_left_joint)
         
-        hip_angle_right = sm.get_angle_between_three_joints(tmp_shoulder_right_joint, 
-                                                           tmp_hip_right_joint,            
-                                                           tmp_knee_right_joint)
+    #     hip_angle_right = sm.get_angle_between_three_joints(tmp_shoulder_right_joint, 
+    #                                                        tmp_hip_right_joint,            
+    #                                                        tmp_knee_right_joint)
         
     
-        # knee_angle_left.append(360 - sm.get_angle_between_three_joints(hip_left, knee_left, ankle_left))
-        # knee_angle_right.append(360 - sm.get_angle_between_three_joints(hip_right, knee_right, ankle_right))
-        # knee_angle_mean.append(360 - sm.get_angle_between_three_joints(hip_mean, knee_mean, ankle_mean))
+    #     # knee_angle_left.append(360 - sm.get_angle_between_three_joints(hip_left, knee_left, ankle_left))
+    #     # knee_angle_right.append(360 - sm.get_angle_between_three_joints(hip_right, knee_right, ankle_right))
+    #     # knee_angle_mean.append(360 - sm.get_angle_between_three_joints(hip_mean, knee_mean, ankle_mean))
 
-        # hip_angle_left.append(sm.get_angle_between_three_joints(shoulder_left, hip_left, knee_left))
-        # hip_angle_right.append(sm.get_angle_between_three_joints(shoulder_right, hip_right, knee_right))
-        # hip_angle_mean.append(sm.get_angle_between_three_joints(spine_shoulder, hip_mean, knee_mean))
+    #     # hip_angle_left.append(sm.get_angle_between_three_joints(shoulder_left, hip_left, knee_left))
+    #     # hip_angle_right.append(sm.get_angle_between_three_joints(shoulder_right, hip_right, knee_right))
+    #     # hip_angle_mean.append(sm.get_angle_between_three_joints(spine_shoulder, hip_mean, knee_mean))
               
-        '''                    
-            BODY_COM_ANGLE = 0
-            BODY_LEAN_ANGLE = 1
-            KNEELEFT_ANGLE = 2
-            KNEERIGHT_ANGLE = 3
-            HIPLEFT_ANGLE = 4
-            HIPRIGHT_ANGLE = 5
-        '''
+    #     '''                    
+    #         BODY_COM_ANGLE = 0
+    #         BODY_LEAN_ANGLE = 1
+    #         KNEELEFT_ANGLE = 2
+    #         KNEERIGHT_ANGLE = 3
+    #         HIPLEFT_ANGLE = 4
+    #         HIPRIGHT_ANGLE = 5
+    #     '''
         
-        angles_list = np.hstack([body_com_angle,
-                                body_lean_angle,
-                                knee_angle_left,
-                                knee_angle_right,
-                                hip_angle_left,
-                                hip_angle_right])
+    #     angles_list = np.hstack([body_com_angle,
+    #                             body_lean_angle,
+    #                             knee_angle_left,
+    #                             knee_angle_right,
+    #                             hip_angle_left,
+    #                             hip_angle_right])
     
-        self.stacked_filtered_angle_vlaues.append(angles_list)
+    #     self.stacked_filtered_angle_vlaues.append(angles_list)
         
-        return 
+    #     return 
         
     
     #def calulate_euler_angles:
@@ -694,9 +763,9 @@ if __name__ == "__main__":
     
         return dataset_roots, part_dirs
 
-
+    root_path = os.path.abspath('../../')
     #_part_id = '3'
-    _part_id = '9'
+    #_part_id = '9'
     #_part_id = '24'
     #_part_id = '404'
     #_part_id = '303'
@@ -705,10 +774,13 @@ if __name__ == "__main__":
     #_movement = 'Quiet-Standing-Eyes-Closed'
     #_movement = 'Foam-Quiet-Standing-Eyes-Open'
     #_movement = 'Foam-Quiet-Standing-Eyes-Closed'
+    #_movement = 'Semi-Tandem-Balance'
     #_movement = 'Tandem-Balance'
     #_movement = 'Unilateral-Stance-Eyes-Closed'
     #_movement = 'Ramp-Quiet-Standing-Eyes-Closed'
-    _skel_root_path = '/media/55129822/Kinect Database/SPPB/SPPB' + _part_id + '/SPPB'+ _part_id +'_'+ _movement +'/skel'   
+    
+    #_skel_root_path = os.path.join(root_path, 'SPPB', _part_id, _part_id +'_'+ _movement, 'skel')
+    #os.path.abspath(root_path + '/SPPB/' +  _part_id +'_'+ _movement +'/skel')
  
     headers = ['PART_ID',
                'BODY_COM_ANGLE',
@@ -724,6 +796,7 @@ if __name__ == "__main__":
     
     """ Create Register """
     _dataset_prefix = 'SPPB'
+    #_dataset_prefix = 'Crewe'
     register_file = os.path.abspath('../Kinect-Faller-Detection/Data/RecordingsRegister2.xlsx')
     register = pd.read_excel(register_file)
 
@@ -740,18 +813,33 @@ if __name__ == "__main__":
         
     dataset_roots, part_dirs = get_part_dirs(register)
     
-    all_Stacked_filtered_angle_vlaues = [] headers
+    all_Stacked_filtered_angle_vlaues = []
     for _part_id in part_dirs: #tqdm(part_dirs):
         #_part_id = 'SPPB11'
         print('\n', _part_id ,'\n')
-        _skel_root_path = '/media/55129822/Kinect Database/SPPB/' + _part_id + '/'+ _part_id +'_'+ _movement +'/skel'   
+        _skel_root_path = os.path.join(root_path, _dataset_prefix, _part_id, _part_id +'_'+ _movement, 'skel')
+        #os.path.abspath(root_path + '/SPPB/' + _part_id + '/'+ _part_id +'_'+ _movement +'/skel')
         
         #Check for no skel files
         _, _, skel_files = ul.walkFileSystem(_skel_root_path)
          
         if len(skel_files) != 0:
             #Create Recording opbject
-            _int_part_id = int(re.search(r'\d+', _part_id).group())
+            
+            if '0A' in _part_id:
+                _tmp_part_id = _part_id.replace('0A', '')    
+                _int_part_id = int(re.search(r'\d+', _tmp_part_id).group())
+                _int_part_id = _int_part_id * 100
+                
+            elif 'Y' in _part_id:
+                _tmp_part_id = _part_id.replace('Y', '')
+                _int_part_id = int(re.search(r'\d+', _tmp_part_id).group())
+                _int_part_id = _int_part_id * 100
+            
+            else:
+                _int_part_id = int(re.search(r'\d+', _part_id).group())
+            
+            
             #create kinectRecording obj
             label_columns = ['impairment_confedence', 'impairment_self', 
                              'impairment_clinical','impairment_stats']
@@ -765,9 +853,12 @@ if __name__ == "__main__":
                 all_Stacked_filtered_angle_vlaues = np.vstack([all_Stacked_filtered_angle_vlaues, kinect_recording.stacked_filtered_angle_vlaues])
     
     #save csv file of angles
-    np.savetxt('All_' + _movement + '_Angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
+    np.savetxt(_dataset_prefix + '_' + _movement + '_Angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
+    
+    
     
 #%% 
+    sys.exit()
     #my_Stacked_filtered_angle_vlaues = my_KinectRecording.stacked_filtered_angle_vlaues
     
     #pd_all_Stacked_filtered_angle_vlaues
@@ -782,28 +873,28 @@ if __name__ == "__main__":
 #%%
     
     #all_Stacked_filtered_angle_vlaues = np.array(np_filtered_angle_vlaues)
-    part_id = 315
-    tmp_recording = pd_all_Stacked_filtered_angle_vlaues[pd_all_Stacked_filtered_angle_vlaues['PART_ID'] == part_id]
+    #part_id = 315
+    tmp_recording = pd_all_Stacked_filtered_angle_vlaues[pd_all_Stacked_filtered_angle_vlaues['PART_ID'] == _part_id]
     recording = np.array(tmp_recording)
 
     plt.plot(recording[:,SkeletonJointAngles.BODY_COM_ANGLE.value], label='Torso CoM angle')
     plt.plot(recording[:,SkeletonJointAngles.BODY_LEAN_ANGLE.value], label='Torso lean angle')
     #plt.ylim(78, 90)
-    plt.title(part_id)
+    plt.title(_part_id)
     plt.legend()
     plt.show()
     
     plt.plot(recording[:,SkeletonJointAngles.HIPLEFT_ANGLE.value], label='Hip left angle')
     plt.plot(recording[:,SkeletonJointAngles.HIPRIGHT_ANGLE.value], label='Hip right angle')
     #plt.ylim(78, 90)
-    plt.title(part_id)
+    plt.title(_part_id)
     plt.legend()
     plt.show()
     
     plt.plot(recording[:,SkeletonJointAngles.KNEELEFT_ANGLE.value], label='Knee left angle')
     plt.plot(recording[:,SkeletonJointAngles.KNEERIGHT_ANGLE.value], label='Knee right angle')
     plt.legend()
-    plt.title(part_id)
+    plt.title(_part_id)
     plt.show()
     
     sys.exit()
@@ -1214,7 +1305,7 @@ if __name__ == "__main__":
     X_f = fft(a)
     plt.plot(np.abs(X_f))
     plt.title('PSD - ' + _part_id + ' ' + HierarchicalSkeletonJoints.COM.name + ' ' + _movement)
-    plt.show()
+    plt.show() 
     print('mean feq:', np.mean(np.abs(X_f)))
     
     #frequencys
