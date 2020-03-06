@@ -35,7 +35,9 @@ sys.path.insert(0, '../')
 from sway_utils import metrics as sm
 #import skel_utils.metrics as sm
 import Utils as ul
-import Read_Kinect_Files as rk
+#import Read_Kinect_Files as rk
+
+import csv
 
 #%%
 class SkeletonJoints(Enum):
@@ -65,6 +67,8 @@ class SkeletonJoints(Enum):
     HANDTIPRIGHT = 23
     THUMBRIGHT = 24
     COM = 25
+    #HEELLEFT = 26
+    #HEELRIGHT = 27
     
     
 class HierarchicalSkeletonJoints(Enum):
@@ -187,6 +191,8 @@ class KinectRecording:
     
     stacked_raw_angle_values = []
     stacked_filtered_angle_vlaues = []
+    
+    sway_metrics = []
 
     
     def __init__(self, skel_root_path, dataset_prefix, movement, part_id, labels=[]):
@@ -199,12 +205,17 @@ class KinectRecording:
         self._labels = labels
         
         self.load_skeletons(skel_root_path)
+        self.load_sway_metrics()
         
         
-    def save_stacked_raw_XYZ(self):
+    def load_sway_metrics(self, ):
+        sway_metric_path = os.path.join(self._root_path, 'sway_metrics.csv')
+        self.sway_metrics = pd.read_csv(sway_metric_path)
+        
+        
+    def save_stacked_raw_XYZ(self, ):
         np.save(self._cached_stacked_raw_XYZ_file_path, self.stacked_raw_XYZ_values)
         
-        return
     
     
     def load_skeletons(self, skel_root_path):
@@ -238,7 +249,7 @@ class KinectRecording:
                 self.skeletons.append(_skel_frame)
                 self.raw_XYZ_values.append(_raw_XYZ)
                 
-                #dont include first frame, having a skel base of 0,0,0 can cause problems
+                #dont include first frame, having a skel base of 0,shuff0,0 can cause problems
                 if self._frame_count > 0:
                     if len(self.stacked_raw_XYZ_values) == 0:
                         self.stacked_raw_XYZ_values = _raw_XYZ
@@ -423,8 +434,8 @@ class KinectRecording:
                                         np.mean(stacked_filtered_XYZ_values[Z][SkeletonJoints.FOOTLEFT.value])])
             
         tmp_foot_left_joint = np.stack([np.mean(stacked_filtered_XYZ_values[X][SkeletonJoints.FOOTRIGHT.value]),
-                                        np.mean(stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTLEFT.value]),
-                                        np.mean(stacked_filtered_XYZ_values[Z][SkeletonJoints.FOOTLEFT.value])])
+                                        np.mean(stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTRIGHT.value]),
+                                        np.mean(stacked_filtered_XYZ_values[Z][SkeletonJoints.FOOTRIGHT.value])])
         
         tmp_foot_mean_joint = sm.mean_twin_joint_pos(tmp_foot_left_joint,
                                                      tmp_foot_left_joint)
@@ -434,6 +445,10 @@ class KinectRecording:
                                            np.mean(stacked_filtered_XYZ_values[Z][SkeletonJoints.COM.value])])
         
         for i in np.ndindex(stacked_filtered_XYZ_values.shape[2]):
+            
+            # tmp_spine_base_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.SPINEBASE.value][i],
+            #                                     stacked_filtered_XYZ_values[Y][SkeletonJoints.SPINEBASE.value][i],
+            #                                     stacked_filtered_XYZ_values[Z][SkeletonJoints.SPINEBASE.value][i]])
         
             tmp_shoulder_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.SHOULDERLEFT.value][i],
                                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.SHOULDERLEFT.value][i],
@@ -442,6 +457,14 @@ class KinectRecording:
             tmp_shoulder_right_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.SHOULDERRIGHT.value][i],
                                                  stacked_filtered_XYZ_values[Y][SkeletonJoints.SHOULDERRIGHT.value][i],
                                                  stacked_filtered_XYZ_values[Z][SkeletonJoints.SHOULDERRIGHT.value][i]])
+            
+            # tmp_shoulder_hip_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.HIPRIGHT.value][i],
+            #                                     stacked_filtered_XYZ_values[Y][SkeletonJoints.SHOULDERLEFT.value][i],
+            #                                     stacked_filtered_XYZ_values[Z][SkeletonJoints.SHOULDERLEFT.value][i]])
+            
+            # tmp_shoulder_hip_right_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.HIPRIGHT.value][i],
+            #                                      stacked_filtered_XYZ_values[Y][SkeletonJoints.SHOULDERRIGHT.value][i],
+            #                                      stacked_filtered_XYZ_values[Z][SkeletonJoints.SHOULDERRIGHT.value][i]])
             
             tmp_spine_shoulder_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.SPINESHOULDER.value][i],
                                                  stacked_filtered_XYZ_values[Y][SkeletonJoints.SPINESHOULDER.value][i],
@@ -494,6 +517,25 @@ class KinectRecording:
                                  stacked_filtered_XYZ_values[Y][SkeletonJoints.ANKLERIGHT.value][i],
                                  stacked_filtered_XYZ_values[Z][SkeletonJoints.ANKLERIGHT.value][i]])
             
+            tmp_heel_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.ANKLELEFT.value][i],
+                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTLEFT.value][i],
+                                 stacked_filtered_XYZ_values[Z][SkeletonJoints.ANKLELEFT.value][i]])
+            
+            tmp_heel_right_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.ANKLERIGHT.value][i],
+                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTRIGHT.value][i],
+                                 stacked_filtered_XYZ_values[Z][SkeletonJoints.ANKLERIGHT.value][i]])
+            
+            tmp_heel_mean_joint = sm.mean_twin_joint_pos(tmp_heel_left_joint, tmp_heel_right_joint)
+            
+            tmp_ankle_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.ANKLELEFT.value][i],
+                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.ANKLELEFT.value][i],
+                                 stacked_filtered_XYZ_values[Z][SkeletonJoints.ANKLELEFT.value][i]])
+            
+            tmp_ankle_right_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.ANKLERIGHT.value][i],
+                                 stacked_filtered_XYZ_values[Y][SkeletonJoints.ANKLERIGHT.value][i],
+                                 stacked_filtered_XYZ_values[Z][SkeletonJoints.ANKLERIGHT.value][i]])
+            
+            
             tmp_foot_left_joint = np.stack([stacked_filtered_XYZ_values[X][SkeletonJoints.FOOTLEFT.value][i],
                                  stacked_filtered_XYZ_values[Y][SkeletonJoints.FOOTLEFT.value][i],
                                  stacked_filtered_XYZ_values[Z][SkeletonJoints.FOOTLEFT.value][i]])
@@ -510,12 +552,20 @@ class KinectRecording:
             #                             stacked_filtered_XYZ_values[Z][SkeletonJoints.COM.value][i]])
             
                                       
+            # body_com_angle = sm.get_angle_between_three_joints(tmp_com_joint, 
+            #                                                    tmp_foot_mean_joint, 
+            #                                                    tmp_gound_pain)                          
+                                      
+            # body_lean_angle = sm.get_angle_between_three_joints(tmp_spine_shoulder_joint, 
+            #                                                    tmp_foot_mean_joint, 
+            #                                                    tmp_gound_pain)
+            
             body_com_angle = sm.get_angle_between_three_joints(tmp_com_joint, 
-                                                               tmp_foot_mean_joint, 
+                                                               tmp_heel_mean_joint, 
                                                                tmp_gound_pain)                          
                                       
             body_lean_angle = sm.get_angle_between_three_joints(tmp_spine_shoulder_joint, 
-                                                               tmp_foot_mean_joint, 
+                                                               tmp_heel_mean_joint, 
                                                                tmp_gound_pain)
             
             knee_angle_left = sm.get_angle_between_three_joints(tmp_hip_left_joint, 
@@ -555,14 +605,13 @@ class KinectRecording:
                                                                    tmp_elbow_right_joint)
             
             ankle_angle_left = sm.get_angle_between_three_joints(tmp_foot_left_joint,
-                                                                  tmp_ankle_left_joint,            
+                                                                  tmp_heel_left_joint,            
                                                                   tmp_knee_left_joint)
             
             ankle_angle_right = sm.get_angle_between_three_joints(tmp_foot_right_joint,
-                                                                  tmp_ankle_right_joint,            
+                                                                  tmp_heel_right_joint,            
                                                                   tmp_knee_right_joint)
             
-        
         
             # knee_angle_left.append(360 - sm.get_angle_between_three_joints(hip_left, knee_left, ankle_left))
             # knee_angle_right.append(360 - sm.get_angle_between_three_joints(hip_right, knee_right, ankle_right))
@@ -603,7 +652,9 @@ class KinectRecording:
             
             if len(self._labels) != 0: 
                 arr_labels = np.array(self._labels)[0]
-                angles_row = np.concatenate((angles_row, arr_labels))
+                self.load_sway_metrics()
+                angles_row = np.concatenate((angles_row, np.array(self.sway_metrics.iloc[0,10:]), arr_labels))
+                
             
             angles_list.append(angles_row)
         
@@ -789,15 +840,45 @@ if __name__ == "__main__":
                'KNEERIGHT_ANGLE',
                'HIPLEFT_ANGLE',
                'HIPRIGHT_ANGLE',
+               'ELBOWLEFT_ANGLE',
+               'ELBOWRIGHT_ANGLE',
+               'ARMPITLEFT_ANGLE',
+               'ARMPITRIGHT_ANGLE',
+               'ANKLELEFT_ANGLE',
+               'ANKLELRIGHT_ANGLE',
+               'RDIST_ML',
+               'RDIST_AP',
+               'RDIST',	
+               'MDIST_ML',
+               'MDIST_AP',
+               'MDIST',	
+               'TOTEX_ML',
+               'TOTEX_AP',
+               'TOTEX',
+               'MVELO_ML',
+               'MVELO_AP',	
+               'MVELO',
+               'MFREQ_ML',
+               'MFREQ_AP',
+               'MFREQ',	
+               'AREA_CE',
+               'AGE',
+               'BMI',
+               'HEIGHT',
+               'WEIGHT',
+               'SEX',
                'impairment_confedence',
                'impairment_self', 
                'impairment_clinical',
-               'impairment_stats']
+               'impairment_stats_MAD_2.0',
+               'impairment_stats_SD_1.96',
+               'impairment_stats_SD_1.5']
     
     """ Create Register """
     _dataset_prefix = 'SPPB'
     #_dataset_prefix = 'Crewe'
-    register_file = os.path.abspath('../Kinect-Faller-Detection/Data/RecordingsRegister2.xlsx')
+    #register_file = os.path.abspath('../Kinect-Faller-Detection/Data/RecordingsRegister2.xlsx')
+    register_file = os.path.abspath('../Kinect-Faller-Detection/Data/RecordingsRegister3.xlsx')
     register = pd.read_excel(register_file)
 
     if _dataset_prefix == 'All':
@@ -841,8 +922,10 @@ if __name__ == "__main__":
             
             
             #create kinectRecording obj
-            label_columns = ['impairment_confedence', 'impairment_self', 
-                             'impairment_clinical','impairment_stats']
+            label_columns = ['age', 'BMI', 'height', 'weight', 'sex',
+                             'impairment_confedence', 'impairment_self', 
+                             'impairment_clinical', 'impairment_stats_MAD_2.0',
+                             'impairment_stats_SD_1.96', 'impairment_stats_SD_1.5']
             labels = register[register['part_id'] == _part_id][label_columns]
             kinect_recording = KinectRecording(_skel_root_path, _dataset_prefix, _movement, _int_part_id, labels=labels)
         
@@ -853,9 +936,16 @@ if __name__ == "__main__":
                 all_Stacked_filtered_angle_vlaues = np.vstack([all_Stacked_filtered_angle_vlaues, kinect_recording.stacked_filtered_angle_vlaues])
     
     #save csv file of angles
-    np.savetxt(_dataset_prefix + '_' + _movement + '_Angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
-    
-    
+    #np.savetxt(_dataset_prefix + '_' + _movement + '_Angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
+
+    #Save csv with headers
+    with open(_dataset_prefix + '_' + _movement + '_Angles_from_heel_and_Sway_Metrics.csv',
+              'wt', newline ='') as file:
+        writer = csv.writer(file, delimiter=',')
+        writer.writerow(i for i in headers)
+        for j in all_Stacked_filtered_angle_vlaues:
+            writer.writerow(j)
+
     
 #%% 
     sys.exit()
@@ -1335,6 +1425,8 @@ if __name__ == "__main__":
     
     # #print('mean:', round(np.mean(freq),3))
     # print('SD:', round(np.std(freq),3))
+    
+# %%
     
     
     

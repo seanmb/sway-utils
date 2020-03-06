@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import os
 
+import math
 from scipy import signal
 
 import matplotlib.pyplot as plt
@@ -124,7 +125,7 @@ def unit_vector(vector):
 
 def get_angle_between_two_joints(j1, j2):
     ''' Returns the angle in degrees between vectors 'v1' and 'v2'::
-
+015044
             >>> angle_between((1, 0, 0), (0, 1, 0))
             1.5707963267948966 rad / 90 deg
             >>> angle_between((1, 0, 0), (1, 0, 0))
@@ -258,7 +259,44 @@ def get_angle_between_three_joints(j1, j2, j3):
     
     return angle_C
 
-def get_AP_angle_between_three_joints(j1, j2, j3):
+def get_angle_between_two_vectors(v1, v2):
+    unit_vector_1 = v1 / np.linalg.norm(v1)
+    unit_vector_2 = v2 / np.linalg.norm(v2)
+    dot_product = np.dot(unit_vector_1, unit_vector_2)
+    rad_angle = np.arccos(dot_product)
+    deg_angle = np.degrees(rad_angle)
+    
+    return deg_angle    
+
+def get_atan_angle(j1, j2, j3):
+    ba = j1 - j2
+    bc = j3 - j2
+    
+    ba = np.linalg.norm(ba)
+    bc = np.linalg.norm(bc)
+
+    cross_product = np.cross(ba, bc)
+    cross_product_length = cross_product
+    dot_product = np.cross(ba, bc)
+    
+    rad_angle = math.atan2(cross_product_length, dot_product)
+    deg_angle = np.degrees(rad_angle) 
+
+    return deg_angle
+
+
+def get_angle(j1, j2, j3):
+    ba = j1 - j2
+    bc = j3 - j2
+
+    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    rad_angle = np.arccos(cosine_angle)
+    deg_angle = np.degrees(rad_angle) 
+
+    return deg_angle
+
+
+def get_AP_angle_between_three_joints_matrix(j1, j2, j3):
     
     l1 =  np.sqrt(np.square(j1[2] - j2[2]))
     l2 =  np.sqrt(np.square(j2[2] - j3[2]))
