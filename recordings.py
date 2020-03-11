@@ -231,7 +231,7 @@ class KinectRecording:
         if os.path.exists(self._cached_stacked_raw_XYZ_file_path):
             self.stacked_raw_XYZ_values = np.load(self._cached_stacked_raw_XYZ_file_path)
             self._load_from_cache = True
-            print('loading', self._cached_stacked_raw_XYZ_file_path)
+            print('loading:', self._cached_stacked_raw_XYZ_file_path, '\n')
         
         #else calulate stuff
         else:
@@ -821,8 +821,8 @@ if __name__ == "__main__":
     #_part_id = '404'
     #_part_id = '303'
     #_part_id = '700'
-    _movement = 'Quiet-Standing-Eyes-Open'
-    #_movement = 'Quiet-Standing-Eyes-Closed'
+    #_movement = 'Quiet-Standing-Eyes-Open'
+    _movement = 'Quiet-Standing-Eyes-Closed'
     #_movement = 'Foam-Quiet-Standing-Eyes-Open'
     #_movement = 'Foam-Quiet-Standing-Eyes-Closed'
     #_movement = 'Semi-Tandem-Balance'
