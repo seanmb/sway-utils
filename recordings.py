@@ -862,6 +862,7 @@ if __name__ == "__main__":
                'MFREQ_AP',
                'MFREQ',	
                'AREA_CE',
+               'GROUP_INC',
                'AGE',
                'BMI',
                'HEIGHT',
@@ -922,7 +923,7 @@ if __name__ == "__main__":
             
             
             #create kinectRecording obj
-            label_columns = ['age', 'BMI', 'height', 'weight', 'sex',
+            label_columns = ['group_inc', 'age', 'BMI', 'height', 'weight', 'sex',
                              'impairment_confedence', 'impairment_self', 
                              'impairment_clinical', 'impairment_stats_MAD_2.0',
                              'impairment_stats_SD_1.96', 'impairment_stats_SD_1.5']
@@ -935,11 +936,12 @@ if __name__ == "__main__":
             else:
                 all_Stacked_filtered_angle_vlaues = np.vstack([all_Stacked_filtered_angle_vlaues, kinect_recording.stacked_filtered_angle_vlaues])
     
+            #break
     #save csv file of angles
     #np.savetxt(_dataset_prefix + '_' + _movement + '_Angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
 
     #Save csv with headers
-    with open(_dataset_prefix + '_' + _movement + '_Angles_from_heel_and_Sway_Metrics.csv',
+    with open(_dataset_prefix + '_' + _movement + '_Angles_from_heel_and_Sway_Metrics_inc_groups.csv',
               'wt', newline ='') as file:
         writer = csv.writer(file, delimiter=',')
         writer.writerow(i for i in headers)
