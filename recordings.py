@@ -873,7 +873,9 @@ if __name__ == "__main__":
                'impairment_clinical',
                'impairment_stats_MAD_2.0',
                'impairment_stats_SD_1.96',
-               'impairment_stats_SD_1.5']
+               'impairment_stats_SD_1.5',
+               'impairment_adult',
+               'impairment_older']
     
     """ Create Register """
     _dataset_prefix = 'SPPB'
@@ -926,7 +928,8 @@ if __name__ == "__main__":
             label_columns = ['group_inc', 'age', 'BMI', 'height', 'weight', 'sex',
                              'impairment_confedence', 'impairment_self', 
                              'impairment_clinical', 'impairment_stats_MAD_2.0',
-                             'impairment_stats_SD_1.96', 'impairment_stats_SD_1.5']
+                             'impairment_stats_SD_1.96', 'impairment_stats_SD_1.5',
+                             'impairment_adult', 'impairment_older']
             labels = register[register['part_id'] == _part_id][label_columns]
             kinect_recording = KinectRecording(_skel_root_path, _dataset_prefix, _movement, _int_part_id, labels=labels)
         
@@ -941,7 +944,9 @@ if __name__ == "__main__":
     #np.savetxt(_dataset_prefix + '_' + _movement + '_Angles.csv', all_Stacked_filtered_angle_vlaues, delimiter=',')
 
     #Save csv with headers
-    with open(_dataset_prefix + '_' + _movement + '_Angles_from_heel_and_Sway_Metrics_inc_groups.csv',
+    #_file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups.csv'
+    _file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups_65.csv'
+    with open(_dataset_prefix + '_' + _movement + _file_name,
               'wt', newline ='') as file:
         writer = csv.writer(file, delimiter=',')
         writer.writerow(i for i in headers)
