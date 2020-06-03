@@ -1,1 +1,0 @@
-name = 'sway__utils'

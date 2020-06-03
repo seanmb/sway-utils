@@ -373,15 +373,16 @@ def confidence_ellipse(x, y, ax, n_std=1.96, facecolor='none', **kwargs):
         
     ellipse.set_transform(transf + ax.transData)
     
-    scaled_ell_radius_x =  ell_radius_x * scale_x
-    scaled_ell_radius_y =  ell_radius_y * scale_y
+    scaled_ell_radius_x =  ell_radius_x * scale_x * 2
+    scaled_ell_radius_y =  ell_radius_y * scale_y * 2
     
     width = scaled_ell_radius_x * 2
     height = scaled_ell_radius_y * 2
+    area = np.pi * scaled_ell_radius_x * scaled_ell_radius_y
     
-    #width = ellipse.width
-    #height = ellipse.height
-    area = np.pi * (width / 2) * (height / 2)
+    # width = ellipse.width
+    # height = ellipse.height
+    # area = np.pi * (ellipse.width/2) * (ellipse.height/2)
     
     return ax.add_patch(ellipse), width, height, area #, angle #ell_radius_x, ell_radius_y
     
@@ -486,13 +487,15 @@ def calculate_RD(selected_recording,
     #elp_AREA = (elp.height/2) * (elp.width/2) * np.pi
     #ax.set_title(deviceType.name + ' CoM ' + str(round(elp.height, 1)) + ' x ' + str(round(elp.width, 1)) + ' area:' + str(AREA_CE))
     #ax.set_title(deviceType.name + ' CoM ' + 'W:' + str(round(width/2, 2)) + ' cm' + ' x ' + 'H:' + str(round(height/2, 2)) + ' cm' + ' Ar:' + str(AREA_CE) + ' cm sq')
+    
     ax.set_title(str.replace(SOT_trial_type, '-', ' ') + ' ' + part_id + ' CoM 95% CE' + 
-                 '\nW:' + str(round(width, 2)) + ' cm' + 
-                 ' x ' + 
-                 'H:' + str(round(height, 2)) + ' cm' + 
-                 ' Ar:' + str(AREA_CE) + ' cm sq')
+                  '\nW:' + str(round(width, 2)) + ' cm' + 
+                  ' x ' + 
+                  'H:' + str(round(height, 2)) + ' cm' + 
+                  ' Ar:' + str(AREA_CE) + ' cm sq')
     
     ax.set_aspect('equal')
+
     if rd_path != '':
         plt.savefig(rd_path)
     

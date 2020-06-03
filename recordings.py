@@ -29,12 +29,13 @@ from tqdm import tqdm
 from enum import Enum
 import re
 
-sys.path.insert(0, '../Utils')
+#sys.path.insert(0, '../Utils')
 sys.path.insert(0, '../')
 
 from sway_utils import metrics as sm
 #import skel_utils.metrics as sm
-import Utils as ul
+#import Utils as ul
+from Utils.Utils import walkFileSystem, get_part_dirs
 #import Read_Kinect_Files as rk
 
 import csv
@@ -124,6 +125,42 @@ class SkeletonJointAngles(Enum):
     ANKLELEFT_ANGLE = 11
     ANKLELRIGHT_ANGLE = 12
     
+class SkeletonIJCP(Enum):
+    '''
+    https://www.mdpi.com/1424-8220/20/5/1291
+    (1) head, (2) neck, 
+    (3) shoulder center (SPINESHOULDER), (4) left shoulder, (5) right shoulder, 
+    (6) trunk center (SPINEMID), 
+    (7) left elbow, (8) right elbow, 
+    (9) hip center (SPINEBASE), (10)left hip, (11) right hip, 
+    (12) left hand, (13) right hand, 
+    (14) left knee, and (15) right knee
+    '''
+    
+    HEAD = 3
+    NECK = 2
+    
+    SPINESHOULDER = 20
+    SHOULDERLEFT = 4
+    SHOULDERRIGHT = 8
+    
+    SPINEMID = 1
+    
+    ELBOWLEFT = 5
+    ELBOWRIGHT = 9
+    
+    SPINEBASE = 0
+    HIPLEFT = 12
+    HIPRIGHT = 16
+    
+    HANDLEFT = 7
+    HANDRIGHT = 11
+    #WRISTLEFT = 6
+    #WRISTRIGHT = 10
+    
+    KNEELEFT = 13
+    KNEERIGHT = 17
+    
     
     def get_joint_from_skel_frame(skel_frame_row):
         x = float(skel_frame_row[2])
@@ -139,7 +176,6 @@ class SkeletonJointAngles(Enum):
 
         return [x, y, z]
     
-
     
 #%%
 class KinectRecording:
@@ -192,8 +228,19 @@ class KinectRecording:
     stacked_raw_angle_values = []
     stacked_filtered_angle_vlaues = []
     
+    
+    ''' 
+        get sway metrics from file
+    '''
     sway_metrics = []
 
+    
+    '''
+        calulate and store    
+        local inter-joint coordination pattern (IJCP)
+    ''' 
+    IJCP_Dist = []
+    IJCP_Velo = []
     
     def __init__(self, skel_root_path, dataset_prefix, movement, part_id, labels=[]):
         self._root_path = str.replace(skel_root_path, '/skel', '')
@@ -210,7 +257,8 @@ class KinectRecording:
         
     def load_sway_metrics(self, ):
         sway_metric_path = os.path.join(self._root_path, 'sway_metrics.csv')
-        self.sway_metrics = pd.read_csv(sway_metric_path)
+        if os.path.exists(sway_metric_path):
+            self.sway_metrics = pd.read_csv(sway_metric_path)
         
         
     def save_stacked_raw_XYZ(self, ):
@@ -235,7 +283,7 @@ class KinectRecording:
         
         #else calulate stuff
         else:
-            root, dirs, skel_files = ul.walkFileSystem(skel_root_path)
+            root, dirs, skel_files = walkFileSystem(skel_root_path)
             skel_files.sort()
             
             if len(skel_files) == 0:
@@ -245,6 +293,7 @@ class KinectRecording:
             #for skelfile in skel_files:    
                 skel_file_path = os.path.join(root, skelfile)
                 _skel_frame, _raw_XYZ = self._load_skel_file(skel_file_path)
+                '''skels are now normailesed'''
                 
                 self.skeletons.append(_skel_frame)
                 self.raw_XYZ_values.append(_raw_XYZ)
@@ -262,9 +311,11 @@ class KinectRecording:
         self.stacked_filtered_XYZ_values = self.filter_joint_sequences(self.stacked_raw_XYZ_values)
         #self.stacked_filtered_angle_vlaues = np.array(self.stacked_filtered_angle_vlaues)
         
-        self.stacked_raw_angle_values = self.calulate_skeleton_angles_from_stacked_XYZ_values(self.stacked_raw_XYZ_values)
-        self.stacked_filtered_angle_vlaues = self.calulate_skeleton_angles_from_stacked_XYZ_values(self.stacked_filtered_XYZ_values)
-        ''' now normalise '''
+        #self.stacked_raw_angle_values = self.calulate_skeleton_angles_from_stacked_XYZ_values(self.stacked_raw_XYZ_values)
+        #self.stacked_filtered_angle_vlaues = self.calulate_skeleton_angles_from_stacked_XYZ_values(self.stacked_filtered_XYZ_values)
+        ''' now normalise ??? '''
+        
+        self.calculate_IJCP()
         
         self.save_stacked_raw_XYZ()
         
@@ -404,9 +455,9 @@ class KinectRecording:
         return skel_frame, raw_XYZ
     
     def calulate_CoM_position(self, skel_frame):
-        _X = 2
-        _Y = 3
-        _Z = 4
+        # _X = 2
+        # _Y = 3
+        # _Z = 4
     
         spine_base = np.stack([skel_frame['X'][SkeletonJoints.SPINEMID.value], skel_frame['Y'][SkeletonJoints.SPINEMID.value], skel_frame['Z'][SkeletonJoints.SPINEMID.value]])
         hip_left = np.stack([skel_frame['X'][SkeletonJoints.HIPLEFT.value], skel_frame['Y'][SkeletonJoints.HIPLEFT.value], skel_frame['Z'][SkeletonJoints.HIPLEFT.value]])
@@ -660,6 +711,92 @@ class KinectRecording:
         
         return np.array(angles_list)
     
+    def calulate_stepped_velocity_distance(self, trial, s=1):
+        X = 0
+        Y = 1
+        Z = 2
+        
+        X_dist = []
+        Y_dist = []
+        Z_dist = []
+        
+        X_velos = []
+        Y_velos = []
+        Z_velos = []
+        
+        X_trial = trial[X,:]
+        Y_trial = trial[Y,:]
+        Z_trial = trial[Z,:]
+        
+        step = s*30
+        
+        for i in range(0, trial.shape[1], step):
+            X_axis = X_trial[i:i+step]
+            Y_axis = Y_trial[i:i+step]
+            Z_axis = Z_trial[i:i+step]
+
+            if len(X_axis) == step:
+                # X_dist.append(np.sum(X_axis)/step)
+                # Y_dist.append(np.sum(Y_axis)/step)
+                # Z_dist.append(np.sum(Z_axis)/step)
+
+                X_dist.append(np.mean(X_axis - np.mean(X_trial)))
+                Y_dist.append(np.mean(Y_axis - np.mean(Y_trial)))
+                Z_dist.append(np.mean(X_axis - np.mean(Z_trial)))
+                
+                
+                X_velos.append((X_axis[len(X_axis)-1] - X_axis[0])/s)
+                Y_velos.append((Y_axis[len(Y_axis)-1] - Y_axis[1])/s)
+                Z_velos.append((Z_axis[len(Z_axis)-1] - Z_axis[2])/s)        
+        
+        dist = np.vstack([X_dist, Y_dist, Z_dist])
+        velos = np.vstack([X_velos, Y_velos, Z_velos])
+        
+        return dist, velos
+    
+    def calculate_IJCP(self, s=1):
+        X = 0
+        Y = 1
+        Z = 2
+        
+        ICJP = []
+        ICJP_list = []
+        
+        X_dist = []
+        Y_dist = []
+        Z_dist = []
+        
+        X_velos = []
+        Y_velos = []
+        Z_velos = []
+        
+        for joint in SkeletonIJCP:
+            tmp_trial = np.stack([self.stacked_filtered_XYZ_values[X][joint.value],
+                                  self.stacked_filtered_XYZ_values[Y][joint.value],
+                                  self.stacked_filtered_XYZ_values[Z][joint.value]])
+            
+            tmp_dist, tmp_velos = self.calulate_stepped_velocity_distance(tmp_trial, s=s)
+    
+            
+            X_dist.append(tmp_dist[X,:])
+            Y_dist.append(tmp_dist[Y,:])
+            Z_dist.append(tmp_dist[Z,:])
+            
+            X_velos.append(tmp_velos[X,:])
+            Y_velos.append(tmp_velos[Y,:])
+            Z_velos.append(tmp_velos[Z,:])
+            
+        X_ICJP_Dist = np.corrcoef(X_dist)
+        Y_ICJP_Dist = np.corrcoef(Y_dist)
+        Z_ICJP_Dist= np.corrcoef(Z_dist)
+            
+        X_ICJP_Velo = np.corrcoef(X_velos)
+        Y_ICJP_Velo = np.corrcoef(Y_velos)
+        Z_ICJP_Velo = np.corrcoef(Z_velos)
+
+        self.IJCP_Dist = np.stack([X_ICJP_Dist, Y_ICJP_Dist, Z_ICJP_Dist])
+        self.IJCP_Velo = np.stack([X_ICJP_Velo, Y_ICJP_Velo, Z_ICJP_Velo])
+    
     
     # def calulate_skeleton_angles(self, skel_frame): #not used anymore
     #     angles_list = []
@@ -799,20 +936,7 @@ class KinectRecording:
 
 # %%        
 if __name__ == "__main__": 
-    def get_part_dirs(register):
-        # walk_root = False
-        part_dirs = []
-        dataset_roots = []
-    
-        # if walk_root:
-            # _, part_dirs, _ = ul.walkFileSystem(root_dir)
-    
-        # else:
-        for index, row in register.iterrows():
-            part_dirs.append(row['part_id'])
-            dataset_roots.append(row['root_dir'])
-    
-        return dataset_roots, part_dirs
+
 
     root_path = os.path.abspath('../../')
     #_part_id = '3'
@@ -905,7 +1029,7 @@ if __name__ == "__main__":
         #os.path.abspath(root_path + '/SPPB/' + _part_id + '/'+ _part_id +'_'+ _movement +'/skel')
         
         #Check for no skel files
-        _, _, skel_files = ul.walkFileSystem(_skel_root_path)
+        _, _, skel_files = walkFileSystem(_skel_root_path)
          
         if len(skel_files) != 0:
             #Create Recording opbject
@@ -945,7 +1069,7 @@ if __name__ == "__main__":
 
     #Save csv with headers
     #_file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups.csv'
-    _file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups_65.csv'
+    _file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups_65_1.csv'
     with open(_dataset_prefix + '_' + _movement + _file_name,
               'wt', newline ='') as file:
         writer = csv.writer(file, delimiter=',')
@@ -1435,5 +1559,28 @@ if __name__ == "__main__":
     
 # %%
     
-    
+# tmp_skel = kinect_recording.stacked_filtered_XYZ_values
+# ''' try without flattening '''
+# tmp_skel_2D = tmp_skel.reshape(-1, tmp_skel.shape[2])
+# tmp_head = tmp_skel_2D[SkeletonJoints.HEAD.value:SkeletonJoints.HEAD.value+3,:]
+# tmp_neck = tmp_skel_2D[SkeletonJoints.NECK.value:SkeletonJoints.NECK.value+3,:]
+# tmp_spine_mid = tmp_skel_2D[SkeletonJoints.SPINEMID.value:SkeletonJoints.SPINEMID.value+3,:]
+# tmp_com = tmp_skel_2D[SkeletonJoints.COM.value:SkeletonJoints.COM.value+3,:]
+
+# tmp_arr = np.vstack([tmp_head, tmp_neck, tmp_com])
+# tmp_arr = np.vstack([tmp_head, tmp_neck, tmp_spine_mid])
+# #tmp_arr = np.vstack([tmp_head])
+
+# tmp_cov = np.corrcoef(tmp_arr)
+
+# plt.plot(tmp_arr)
+# plt.show()
+
+# plt.matshow(tmp_cov, cmap='jet')
+# plt.show()
+
+# plt.matshow(pd.DataFrame(tmp_arr).corr(), cmap='jet')
+# plt.show()
+
+
     
