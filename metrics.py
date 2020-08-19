@@ -21,6 +21,8 @@ import matplotlib.transforms as transforms
 
 from enum import Enum        
 
+
+
 #%%
 class SOTTrial(Enum):
     '''
@@ -117,6 +119,10 @@ THUMBLEFT = 22
 HANDTIPRIGHT = 23
 THUMBRIGHT = 24
 
+X = 0
+Y = 1
+Z = 2
+
 #%%
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
@@ -145,14 +151,14 @@ def get_angle_between_two_joints(j1, j2):
 
 def normalise_skeleton(skel_frame, spine_base_joint):
     normalised_skel_frame = np.copy(skel_frame)
-    x = 0
-    y = 1
-    z = 2
+    # x = 0
+    # y = 1
+    # z = 2
 
     for i in range(skel_frame.shape[0]):
-        normalised_skel_frame[i][2] =  str(100*(float(skel_frame[i][2]) - spine_base_joint[x]))
-        normalised_skel_frame[i][3] =  str(100*(float(skel_frame[i][3]) - spine_base_joint[y]))
-        normalised_skel_frame[i][4] =  str(100*(float(skel_frame[i][4]) - spine_base_joint[z]))
+        normalised_skel_frame[i][2] =  str(100*(float(skel_frame[i][2]) - spine_base_joint[X]))
+        normalised_skel_frame[i][3] =  str(100*(float(skel_frame[i][3]) - spine_base_joint[Y]))
+        normalised_skel_frame[i][4] =  str(100*(float(skel_frame[i][4]) - spine_base_joint[Z]))
 
     return normalised_skel_frame
 
@@ -185,6 +191,48 @@ def calculate_com(skelFrame):
     return com.tolist()
 
 
+def euler_angle(j1, j2, deg=True):
+    eA = np.arctan2(np.linalg.norm(np.cross(j1, j2)), np.dot(j1, j2))
+    if deg:
+        eA = np.rad2deg(eA)
+    return eA
+
+
+def euler_angle_2(j1, j2, deg=True):
+    dot_prod = np.dot(j1, j2)
+    norm_j1 = np.linalg.norm(j1)
+    norm_j2 = np.linalg.norm(j2)
+    dev = dot_prod / (norm_j1 * norm_j2)
+    eA = np.arccos(dev)
+    if deg:
+        eA = np.rad2deg(eA)
+    return eA
+
+
+def euler_angle_3d(j1, j2, deg=True):
+    x_YZ_euler = euler_angle([j1[Y], j1[Z]], [j2[Y], j2[Z]], deg)
+    y_XZ_euler = euler_angle([j1[X], j1[Z]], [j2[X], j2[Z]], deg)
+    z_XY_euler = euler_angle([j1[X], j1[Y]], [j2[X], j2[Y]], deg)
+    
+    eular_angle_3d = np.hstack([x_YZ_euler, y_XZ_euler, z_XY_euler])
+    return eular_angle_3d
+
+
+def rotation_matrix_from_vectors(vec1, vec2):
+    """ Find the rotation matrix that aligns vec1 to vec2
+    :param vec1: A 3d "source" vector
+    :param vec2: A 3d "destination" vector
+    :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    """
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    v = np.cross(a, b)
+    c = np.dot(a, b)
+    s = np.linalg.norm(v)
+    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    return rotation_matrix
+
+
 def euclidean_distance_between_joints(j1, j2):
     ed = np.sqrt(np.square(j1[0] - j2[0]) + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
     #ed = np.sqrt(np.square(j1[0] - j2[0]) + 0 + np.square(j1[2] - j2[2]))
@@ -192,6 +240,7 @@ def euclidean_distance_between_joints(j1, j2):
     #ed = np.sqrt(0 + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
     
     return ed
+
 
 def get_joint_XYZ(skel_frame_row):
     x = float(skel_frame_row[2])
@@ -247,6 +296,97 @@ def get_angle_between_three_joints_by_matirx(j1, j2, j3):
     return deg_between_three_joints2
 
 
+def eulidean_distance_2d(j1, j2):
+    ed = np.sqrt(np.square(j1[0] - j2[0]) + np.square(j1[1] - j2[1]))
+    return ed
+
+
+# def get_3d_angle_between_two_joints(j1, j2, deg=True):
+#     x_axis = [[j1[X], j1[Y]], [j2[X], j2[Y]]]
+#     y_axis = [[j1[X], j1[Z]], [j2[X], j2[Z]]]
+#     z_axis = [[j1[Z], j1[Y]], [j2[Z], j2[Y]]]
+
+#     # x_angle = euler_angle(x_axis[0], x_axis[1])
+#     # y_angle = euler_angle(y_axis[0], y_axis[1])
+#     # z_angle = euler_angle(z_axis[0], z_axis[1])
+    
+#     get_2d_angle_between_two_joints()
+
+#     SP_FP_TP_angle_3d = np.hstack([x_angle, y_angle, z_angle])
+#     return SP_FP_TP_angle_3d
+
+
+def get_3d_angle_between_two_joints(j1, j2, deg=True):
+    SP_angle = get_2d_angle_between_two_joints(j1, j2, plane='SP', deg=deg)
+    FP_angle = get_2d_angle_between_two_joints(j1, j2, plane='FP', deg=deg)
+    TP_angle = get_2d_angle_between_two_joints(j1, j2, plane='TP', deg=deg)
+    
+    #eular_angle_3d = np.hstack([x_YZ_euler, y_XZ_euler, z_XY_euler])
+    SP_FP_TP_angle_3d = np.hstack([FP_angle, SP_angle, TP_angle])
+    return SP_FP_TP_angle_3d
+
+
+def get_3d_angle_between_three_joints(j1, j2, j3, deg=True):
+    SP_angle = get_2d_angle_between_three_joints(j1, j2, j3, plane='SP', deg=deg)
+    FP_angle = get_2d_angle_between_three_joints(j1, j2, j3, plane='FP', deg=deg)
+    TP_angle = get_2d_angle_between_three_joints(j1, j2, j3, plane='TP', deg=deg)
+    
+    #eular_angle_3d = np.hstack([x_YZ_euler, y_XZ_euler, z_XY_euler])
+    SP_FP_TP_angle_3d = np.hstack([SP_angle, FP_angle, TP_angle])
+    return SP_FP_TP_angle_3d
+
+
+def get_2d_angle_between_two_joints(j1, j2, plane='SP', deg=True):
+    if plane == 'SP':
+        co_plane = [Z, Y] # SI, AP | Sagital Plane
+    elif plane == 'FP':
+        co_plane = [X, Y] # [X, Y] # ML, SI | Frontal Plane
+    elif plane == 'TP':
+        co_plane = [X, Z] #[X, Z] # ML, AP | Transverse Plane
+        
+    angle_C = euler_angle([j1[co_plane[0]], j1[co_plane[1]]], [j2[co_plane[0]], j2[co_plane[1]]], deg=deg)
+    
+    return angle_C
+
+
+def get_angle_between_3_points(A, B, C, deg=True):
+    a = np.subtract(A, B)
+    b = np.subtract(C, B)
+    
+    dot_a_b = np.dot(a, b)
+    mag_a_b = np.linalg.norm(a) * np.linalg.norm(b)
+    angle = np.arccos(dot_a_b / mag_a_b)
+    
+    if deg:
+        angle = np.rad2deg(angle)
+        
+    return angle     
+
+
+def get_2d_angle_between_three_joints(j1, j2, j3, plane='SP', deg=True):
+    #here
+    #AP = [Z, Y]
+    #ML = [X, Y]
+    
+    if plane == 'SP':
+        co_plane = [Z, Y] # SI, AP | Sagital Plane
+    elif plane == 'FP':
+        co_plane = [X, Y] # [X, Y] # ML, SI | Frontal Plane
+    elif plane == 'TP':
+        co_plane = [X, Z] # [X, Z] # ML, AP | Transverse Plane
+    
+    a = eulidean_distance_2d([j1[co_plane[0]], j1[co_plane[1]]], [j2[co_plane[0]], j2[co_plane[1]]])
+    b = eulidean_distance_2d([j2[co_plane[0]], j2[co_plane[1]]], [j3[co_plane[0]], j3[co_plane[1]]]) #j2, j3)
+    c = eulidean_distance_2d([j3[co_plane[0]], j3[co_plane[1]]], [j1[co_plane[0]], j1[co_plane[1]]]) #j3, j1)
+    
+    angle_C = np.arccos((a**2 + b**2 - c**2) / (2 * a * b))
+    
+    if deg:
+        angle_C = np.degrees(angle_C)
+    
+    return angle_C
+
+
 def get_angle_between_three_joints(j1, j2, j3):
     
     #useing cosign rule
@@ -257,9 +397,9 @@ def get_angle_between_three_joints(j1, j2, j3):
 
     angle_C = np.degrees(np.arccos((a**2 + b**2 - c**2) / (2 * a * b)))
     
-    return angle_C
+    return 180 - angle_C
 
-def get_angle_between_two_vectors(v1, v2):
+def get_angle_between_two_vectors_old(v1, v2):
     unit_vector_1 = v1 / np.linalg.norm(v1)
     unit_vector_2 = v2 / np.linalg.norm(v2)
     dot_product = np.dot(unit_vector_1, unit_vector_2)
@@ -305,6 +445,9 @@ def get_AP_angle_between_three_joints_matrix(j1, j2, j3):
     deg_between_three_joints = np.degrees(rad_between_three_joints) 
     
     return deg_between_three_joints
+
+
+       
 
 #%%
 def get_unique_values(full_list):
@@ -862,3 +1005,11 @@ def load_balance_master_file(rootDir,
 #scaled_ell_radius_y = ell_radius_y * scale_y
 #
 #area = np.pi * scaled_ell_radius_x * scaled_ell_radius_y
+
+# %%
+from scipy.spatial import procrustes
+#The matrix b is a rotated, shifted, scaled and mirrored version of a here:
+a = np.array([[1, 3], [1, 2], [1, 1], [2, 1]], 'd')
+b = np.array([[4, -2], [4, -4], [4, -6], [2, -6]], 'd')
+mtx1, mtx2, disparity = procrustes(a, b)
+round(disparity)
