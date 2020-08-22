@@ -133,6 +133,45 @@ class SkeletonJointAngles(Enum):
     ANKLELEFT_ANGLE = 11
     ANKLELRIGHT_ANGLE = 12
     
+    
+class BodySegments(Enum):
+
+    #Torso
+    SPINEBASE_SPINEMID = [SkeletonJoints.SPINEBASE.value, SkeletonJoints.SPINEMID.value]
+    SPINEMID_SPINESHOULDER = [SkeletonJoints.SPINEMID.value, SkeletonJoints.SPINESHOULDER.value]
+    SPINESHOULDER_NECK = [SkeletonJoints.SPINESHOULDER.value, SkeletonJoints.NECK.value]
+    NECK_HEAD = [SkeletonJoints.NECK.value, SkeletonJoints.HEAD.value]
+    
+    #Left upper
+    SPINESHOULDER_SHOULDERLEFT = [SkeletonJoints.SPINESHOULDER.value, SkeletonJoints.SHOULDERLEFT.value]
+    SHOULDERLEFT_ELBOWLEFT = [SkeletonJoints.SHOULDERLEFT.value, SkeletonJoints.ELBOWLEFT.value]
+    ELBOWLEFT_WRISTLEFT = [SkeletonJoints.ELBOWLEFT.value, SkeletonJoints.WRISTLEFT.value]
+    WRISTLEFT_HANDLEFT = [SkeletonJoints.WRISTLEFT.value, SkeletonJoints.HANDLEFT.value]
+    HANDLEFT_THUMPLEFT = [SkeletonJoints.HANDLEFT.value, SkeletonJoints.THUMBLEFT.value]
+    HANDLEFT_HANDTIPLEFT = [SkeletonJoints.HANDLEFT.value, SkeletonJoints.HANDTIPLEFT.value]
+    
+    #Right upper
+    SPINESHOULDER_SHOULDERRIGHT = [SkeletonJoints.SPINESHOULDER.value, SkeletonJoints.SHOULDERRIGHT.value]
+    SHOULDERRIGHT_ELBOWRIGHT = [SkeletonJoints.SHOULDERRIGHT.value, SkeletonJoints.ELBOWRIGHT.value]
+    ELBOWRIGHT_WRISTRIGHT = [SkeletonJoints.ELBOWRIGHT.value, SkeletonJoints.WRISTRIGHT.value]
+    WRISTRIGHT_HANDRIGHT = [SkeletonJoints.WRISTRIGHT.value, SkeletonJoints.HANDRIGHT.value]
+    HANDRIGHT_THUMPRIGHT = [SkeletonJoints.HANDRIGHT.value, SkeletonJoints.THUMBRIGHT.value]
+    HANDRIGHT_HANDTIPRIGHT = [SkeletonJoints.HANDRIGHT.value, SkeletonJoints.HANDTIPRIGHT.value]
+    
+    #Left lower
+    SPINEBASE_HIPLEFT = [SkeletonJoints.SPINEBASE.value, SkeletonJoints.HIPLEFT.value]
+    HIPLEFT_KNEELEFT = [SkeletonJoints.HIPLEFT.value, SkeletonJoints.KNEELEFT.value]
+    KNEELEFT_ANKLELEFT = [SkeletonJoints.KNEELEFT.value, SkeletonJoints.ANKLELEFT.value]
+    ANKLELEFT_FOOTLEFT = [SkeletonJoints.ANKLELEFT.value, SkeletonJoints.FOOTLEFT.value]
+    
+    #Right lower
+    SPINEBASE_HIPRIGHT = [SkeletonJoints.SPINEBASE.value, SkeletonJoints.HIPRIGHT.value]
+    HIPRIGHT_KNEERIGHT = [SkeletonJoints.HIPRIGHT.value, SkeletonJoints.KNEERIGHT.value]
+    KNEERIGHT_ANKLERIGHT = [SkeletonJoints.KNEERIGHT.value, SkeletonJoints.ANKLERIGHT.value]
+    ANKLERIGHT_FOOTRIGHT = [SkeletonJoints.ANKLERIGHT.value, SkeletonJoints.FOOTRIGHT.value]
+
+    
+    
 class SkeletonIJCP(Enum):
     '''
     https://www.mdpi.com/1424-8220/20/5/1291
@@ -193,30 +232,35 @@ class WalkedSkelAngles(Enum):
     Data, vol. 3, no. 1, 2018.
     NB no head tip and no tip
     '''
-    SPINEBASE_SPINEMID = [0, 1]
-    SPINEMID_SPINESHOULDER = [1, 20]
-    SPINESHOULDER_NECK = [20, 2]
-    NECK_HEAD = [2, 3]
+    #Torso
+    SPINEBASE_SPINEMID = [SkeletonJoints.SPINEBASE.value, SkeletonJoints.SPINEMID.value]
+    SPINEMID_SPINESHOULDER = [SkeletonJoints.SPINEMID.value, SkeletonJoints.SPINESHOULDER.value]
+    SPINESHOULDER_NECK = [SkeletonJoints.SPINESHOULDER.value, SkeletonJoints.NECK.value]
+    NECK_HEAD = [SkeletonJoints.NECK.value, SkeletonJoints.HEAD.value]
     
-    SPINESHOULDER_SHOULDERLEFT = [20, 4]
-    SHOULDERLEFT_ELBOWLEFT = [4, 5]
-    ELBOWLEFT_WRISTLEFT = [5, 6]
-    WRISTLEFT_HANDLEFT = [6, 7]
+    #Left upper
+    SPINESHOULDER_SHOULDERLEFT = [SkeletonJoints.SPINESHOULDER.value, SkeletonJoints.SHOULDERLEFT.value]
+    SHOULDERLEFT_ELBOWLEFT = [SkeletonJoints.SHOULDERLEFT.value, SkeletonJoints.ELBOWLEFT.value]
+    ELBOWLEFT_WRISTLEFT = [SkeletonJoints.ELBOWLEFT.value, SkeletonJoints.WRISTLEFT.value]
+    WRISTLEFT_HANDLEFT = [SkeletonJoints.WRISTLEFT.value, SkeletonJoints.HANDLEFT.value]
+
+    #Right upper
+    SPINESHOULDER_SHOULDERRIGHT = [SkeletonJoints.SPINESHOULDER.value, SkeletonJoints.SHOULDERRIGHT.value]
+    SHOULDERRIGHT_ELBOWRIGHT = [SkeletonJoints.SHOULDERRIGHT.value, SkeletonJoints.ELBOWRIGHT.value]
+    ELBOWRIGHT_WRISTRIGHT = [SkeletonJoints.ELBOWRIGHT.value, SkeletonJoints.WRISTRIGHT.value]
+    WRISTRIGHT_HANDRIGHT = [SkeletonJoints.WRISTRIGHT.value, SkeletonJoints.HANDRIGHT.value]
     
-    SPINESHOULDER_SHOULDERRIGHT = [20, 8]
-    SHOULDERRIGHT_ELBOWRIGHT = [8, 9]
-    ELBOWRIGHT_WRISTRIGHT = [9, 10]
-    WRISTRIGHT_HANDRIGHT = [10, 11]
+    #Left lower
+    SPINEBASE_HIPLEFT = [SkeletonJoints.SPINEBASE.value, SkeletonJoints.HIPLEFT.value]
+    HIPLEFT_KNEELEFT = [SkeletonJoints.HIPLEFT.value, SkeletonJoints.KNEELEFT.value]
+    KNEELEFT_ANKLELEFT = [SkeletonJoints.KNEELEFT.value, SkeletonJoints.ANKLELEFT.value]
+    ANKLELEFT_FOOTLEFT = [SkeletonJoints.ANKLELEFT.value, SkeletonJoints.FOOTLEFT.value]
     
-    SPINEBASE_HIPLEFT = [0, 12]
-    HIPLEFT_KNEELEFT = [12, 13]
-    KNEELEFT_ANKLELEFT = [13, 14]
-    ANKLELEFT_FOOTLEFT = [14, 15]
-    
-    SPINEBASE_HIPRIGHT = [0, 16]
-    HIPRIGHT_KNEERIGHT = [16, 17]
-    KNEERIGHT_ANKLERIGHT = [17, 18]
-    ANKLERIGHT_FOOTRIGHT = [18, 19]
+    #Right lower
+    SPINEBASE_HIPRIGHT = [SkeletonJoints.SPINEBASE.value, SkeletonJoints.HIPRIGHT.value]
+    HIPRIGHT_KNEERIGHT = [SkeletonJoints.HIPRIGHT.value, SkeletonJoints.KNEERIGHT.value]
+    KNEERIGHT_ANKLERIGHT = [SkeletonJoints.KNEERIGHT.value, SkeletonJoints.ANKLERIGHT.value]
+    ANKLERIGHT_FOOTRIGHT = [SkeletonJoints.ANKLERIGHT.value, SkeletonJoints.FOOTRIGHT.value]
     
     
 class WalkedSkelAnglesIn3s(Enum):
@@ -296,6 +340,9 @@ class KinectRecording:
 
     _cached_stacked_raw_XYZ_file_path = ''
     _cached_skeletons_path = ''
+    
+    _skel_scale = 1
+    _ref_neck_length = 0.15
 
     ''''
         Values from files
@@ -515,13 +562,47 @@ class KinectRecording:
         #stacked_filtered_XYZ_values = np.reshape(stacked_filtered_XYZ_values,[3,26,600])
         
         return stacked_filtered_XYZ_values
+    
+    
+    # def scale_skeleton(self, skel_frame, ref_neck_length=0.35):
+    #     #get scale
+    #     segment = BodySegments.NECK_HEAD
+    #     j1 = skel_frame.iloc[segment.value[0]][['X', 'Y', 'Z']].tolist()
+    #     j2 = skel_frame.iloc[segment.value[1]][['X', 'Y', 'Z']].tolist()
+    #     skel_neck_length = sm.euclidean_distance_between_joints(j1, j2)
         
-    def normalise_skeleton(self, skel_frame):
+        
+    #     _skel_scale = skel_neck_length / ref_neck_length
+        
+    #     scaled_skel_frame = pd.DataFrame.copy(skel_frame,deep=False)
+        
+    #     for segment in SkeletonJoints:
+    #         _skel_scale.iloc[joint_number, normalised_skel_frame.columns.get_loc('X')] = (skel_frame.iloc[joint_number]['X'] * _skel_scale)
+    #         _skel_scale.iloc[joint_number, normalised_skel_frame.columns.get_loc('Y')] = (skel_frame.iloc[joint_number]['Y'] * _skel_scale)
+    #         _skel_scale.iloc[joint_number, normalised_skel_frame.columns.get_loc('Z')] = (skel_frame.iloc[joint_number]['Z'] * _skel_scale)
+        
+    #     #scaled_skel_frame = 
+            
+        
+    #     return scaled_skel_frame
+        
+        
+    def normalise_skeleton(self, skel_frame, scale=False, ref_neck_length=0.15):
+        
         if len(self._ref_spine_base) == 0:
             self._ref_spine_base =  skel_frame.iloc[SkeletonJoints.SPINEBASE.value][['X', 'Y', 'Z']].tolist()
             #self._ref_spine_base =  skel_frame.iloc[SkeletonJoints.SPINESHOULDER.value][['X', 'Y', 'Z']].tolist()
             self._ref_skel_frame =  skel_frame
             #print('Getting Spinebase')
+        
+        
+            #get scale
+            segment = BodySegments.NECK_HEAD
+            j1 = skel_frame.iloc[segment.value[0]][['X', 'Y', 'Z']].tolist()
+            j2 = skel_frame.iloc[segment.value[1]][['X', 'Y', 'Z']].tolist()
+            skel_neck_length = sm.euclidean_distance_between_joints(j1, j2)
+        
+            self._skel_scale = ref_neck_length / skel_neck_length
         
         normalised_skel_frame = pd.DataFrame.copy(skel_frame,deep=False)
         # x = 0
@@ -543,10 +624,17 @@ class KinectRecording:
             normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('Y')] = (skel_frame.iloc[joint_number]['Y'] - self._ref_spine_base[Y])
             normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('Z')] = (skel_frame.iloc[joint_number]['Z'] - self._ref_spine_base[Z])
         
+            if scale:
+                normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('X')] = (skel_frame.iloc[joint_number]['X'] * self._skel_scale)
+                normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('Y')] = (skel_frame.iloc[joint_number]['Y'] * self._skel_scale)
+                normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('Z')] = (skel_frame.iloc[joint_number]['Z'] * self._skel_scale)
+        
             if joint_number == 24:
                 break
-            
-        self._frame_count +=1     
+       
+        self._frame_count +=1
+        
+        
         return normalised_skel_frame
     
     
@@ -566,7 +654,7 @@ class KinectRecording:
         #Y = np.array(skel_frame[:,3].tolist())
         #Z = np.array(skel_frame[:,4].tolist())
         ''' Normalise '''
-        skel_frame = self.normalise_skeleton(skel_frame)
+        skel_frame = self.normalise_skeleton(skel_frame, scale=True)
         
         #Add CoM
         tmp_CoM = self.calulate_CoM_position(skel_frame)
@@ -1302,8 +1390,8 @@ if __name__ == "__main__":
     #_part_id = '404'
     #_part_id = '303'
     #_part_id = '700'
-    _movement = 'Chair-Rise'
-    #_movement = 'Quiet-Standing-Eyes-Open'
+    #_movement = 'Chair-Rise'
+    _movement = 'Quiet-Standing-Eyes-Open'
     #_movement = 'Quiet-Standing-Eyes-Closed'
     #_movement = 'Foam-Quiet-Standing-Eyes-Open'
     #_movement = 'Foam-Quiet-Standing-Eyes-Closed'

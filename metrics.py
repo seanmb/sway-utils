@@ -234,7 +234,7 @@ def rotation_matrix_from_vectors(vec1, vec2):
 
 
 def euclidean_distance_between_joints(j1, j2):
-    ed = np.sqrt(np.square(j1[0] - j2[0]) + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
+    ed = np.sqrt(np.square(j1[X] - j2[X]) + np.square(j1[Y] - j2[Y]) + np.square(j1[Z] - j2[Z]))
     #ed = np.sqrt(np.square(j1[0] - j2[0]) + 0 + np.square(j1[2] - j2[2]))
     #ed = np.sqrt(np.square(j1[0] - j2[0]) + np.square(j1[1] - j2[1]) + 0)  
     #ed = np.sqrt(0 + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
