@@ -30,8 +30,8 @@ from tqdm import tqdm
 from enum import Enum
 import re
 
-from mgen import rotation_from_angles
-from mgen import rotation_around_x, rotation_around_y, rotation_around_z
+#from mgen import rotation_from_angles
+#from mgen import rotation_around_x, rotation_around_y, rotation_around_z
 
 
 sys.path.append(os.path.abspath('../'))
@@ -42,11 +42,11 @@ from Utils.Utils import walkFileSystem, get_part_dirs
 
 import csv
 
-import transforms3d
+#import transforms3d
 
-from pytransform3d.rotations import *
+#from pytransform3d.rotations import *
 
-from squaternion import Quaternion
+#from squaternion import Quaternion
 
 #%%
 class SkeletonJoints(Enum):
@@ -75,6 +75,37 @@ class SkeletonJoints(Enum):
     THUMBLEFT = 22
     HANDTIPRIGHT = 23
     THUMBRIGHT = 24
+    COM = 25
+    #HEELLEFT = 26
+    #HEELRIGHT = 27
+    
+    
+class SkeletonJoints_no_hands(Enum):
+    SPINEBASE = 0
+    SPINEMID = 1
+    NECK = 2
+    #HEAD = 3
+    SHOULDERLEFT = 4
+    ELBOWLEFT = 5
+    WRISTLEFT = 6
+    #HANDLEFT = 7
+    SHOULDERRIGHT = 8
+    ELBOWRIGHT = 9
+    WRISTRIGHT = 10
+    #HANDRIGHT = 11
+    HIPLEFT = 12
+    KNEELEFT = 13
+    ANKLELEFT = 14
+    #FOOTLEFT = 15
+    HIPRIGHT = 16
+    KNEERIGHT = 17
+    ANKLERIGHT = 18
+    #FOOTRIGHT = 19
+    SPINESHOULDER = 20
+    #HANDTIPLEFT = 21
+    #THUMBLEFT = 22
+    #HANDTIPRIGHT = 23
+    #THUMBRIGHT = 24
     COM = 25
     #HEELLEFT = 26
     #HEELRIGHT = 27
@@ -170,9 +201,9 @@ class BodySegments(Enum):
     KNEERIGHT_ANKLERIGHT = [SkeletonJoints.KNEERIGHT.value, SkeletonJoints.ANKLERIGHT.value]
     ANKLERIGHT_FOOTRIGHT = [SkeletonJoints.ANKLERIGHT.value, SkeletonJoints.FOOTRIGHT.value]
 
-    #HEAD_SPINE_BASE = [SkeletonJoints.HEAD.value, SkeletonJoints.SPINEBASE.value]
-    #SHOULDERKEFT_WRISTLEFT = [SkeletonJoints.SHOULDERLEFT.value, SkeletonJoints.WRISTLEFT.value]
-    #HIPLEFT_ANKLELEFT = [SkeletonJoints.HIPLEFT.value, SkeletonJoints.ANKLELEFT.value]
+    HEAD_SPINE_BASE = [SkeletonJoints.HEAD.value, SkeletonJoints.SPINEBASE.value]
+    SHOULDERKEFT_WRISTLEFT = [SkeletonJoints.SHOULDERLEFT.value, SkeletonJoints.WRISTLEFT.value]
+    HIPLEFT_ANKLELEFT = [SkeletonJoints.HIPLEFT.value, SkeletonJoints.ANKLELEFT.value]
 
 
 
@@ -331,7 +362,7 @@ class SkeletonIJCP(Enum):
         return [x, y, z]
 
 
-reference_skeleton = [[-0.05550906,  0.2420897,  3.240084],
+ref_skeleton = [[-0.05550906,  0.2420897,  3.240084],
                       [-0.05993826,  0.5669096,  3.222304],
                       [-0.06447478,  0.882657,  3.192321],
                       [-0.05508147,  1.028882,  3.162482],
@@ -457,7 +488,31 @@ class WalkedSkelAnglesIn3s(Enum):
     # ANKLELRIGHT_a = [SkeletonJoints.FOOTRIGHT.value,
     #               SkeletonJoints.ANKLERIGHT.value,
     #               SkeletonJoints.KNEERIGHT.value,]
-          
+    
+    
+class RefernceTorsoJoints_HEAD(Enum):
+    HEAD = SkeletonJoints.HEAD.value
+   
+    SHOULDERLEFT = SkeletonJoints.SHOULDERLEFT.value
+    SHOULDERRIGHT = SkeletonJoints.SHOULDERRIGHT.value    
+    
+    HIPLEFT = SkeletonJoints.HIPLEFT.value
+    HIPRIGHT = SkeletonJoints.HIPRIGHT.value
+
+
+class RefernceTorsoJoints_NECK(Enum):
+    NECK = SkeletonJoints.NECK.value
+    
+    SHOULDERLEFT = SkeletonJoints.SHOULDERLEFT.value
+    SHOULDERRIGHT = SkeletonJoints.SHOULDERRIGHT.value
+        
+    HIPLEFT = SkeletonJoints.HIPLEFT.value
+    HIPRIGHT = SkeletonJoints.HIPRIGHT.value 
+
+
+class RefernceTorsoJoints_COM(Enum):
+    COM = SkeletonJoints.COM.value
+       
 
 X = 0
 Y = 1
@@ -486,6 +541,7 @@ class KinectRecording:
     _cached_skeletons_path = ''
     
     _skel_scale = []
+    _torso_scale = 0
     #_ref_neck_length = 0.15
     _scale_skeletons = False
 
@@ -545,6 +601,17 @@ class KinectRecording:
     walked_skel_angles = []
     
     
+    '''
+        Calulate and sotre Cosine Distance and Normalised Magnitude from 
+        Q. Ke, S. An, M. Bennamoun, F. Sohel, and F. Boussaid, “SkeletonNet: 
+            Mining Deep Part Features for 3-D Action Recognition,” 
+            IEEE Signal Process. Lett., vol. 24, no. 6, pp. 731–735, Jun. 2017.
+    '''
+    cosine_distance = []
+    normalised_magnitude = []
+    
+    
+    
     def __init__(self, skel_root_path, dataset_prefix, movement, part_id, labels=[], scale_skeletons=False):
         self._root_path = str.replace(skel_root_path, '/skel', '')
         self._root_path = str.replace(self._root_path, '\skel', '')
@@ -583,12 +650,14 @@ class KinectRecording:
         if self._scale_skeletons:
             cached_stacked_raw_XYZ_file_name = (self._dataset_prefix +
                                                 str(self._part_id) + '_' +
-                                                'cached_stacked_raw_XYZ_scaled_' + 
+                                                'cached_stacked_raw_XYZ_scaled_' +
+                                                #'cached_stacked_ankle_raw_XYZ_scaled_' +
                                                 self._movement + '.npy')
             
             cached_skeletons_file_name = (self._dataset_prefix +
                                                 str(self._part_id) + '_' +
-                                                'cached_skeletons_scaled_' + 
+                                                'cached_skeletons_scaled_' +
+                                                #'cached_skeletons_ankle_scaled_' + 
                                                 self._movement + '.csv') 
         
         else:
@@ -631,7 +700,7 @@ class KinectRecording:
             #for skelfile in skel_files:    
                 skel_file_path = os.path.join(root, skelfile)
                 _skel_frame, _raw_XYZ = self._load_skel_file(skel_file_path)
-                '''skels are now normailesed'''
+                '''skels are now normailesed and com added '''
                 
                 self.skeletons.append(_skel_frame)
                 self.raw_XYZ_values.append(_raw_XYZ)
@@ -658,14 +727,18 @@ class KinectRecording:
         #self.stacked_raw_angle_values = self.calulate_skeleton_angles_from_stacked_XYZ_values(self.stacked_raw_XYZ_values)
         #self.stacked_filtered_angle_vlaues = self.calulate_skeleton_angles_from_stacked_XYZ_values(self.stacked_filtered_XYZ_values)
         
-        self.smc_features = self.get_SMC_features(self.stacked_filtered_XYZ_values)
         
-        self.calculate_IJCP()
+        ''' these used to be called on load skeletons  
+            However, it's better to call then when you need them
+        '''
+        #self.smc_features = self.get_SMC_features(self.stacked_filtered_XYZ_values)
         
-        self.calculate_walked_skel_angles()
+        #self.calculate_IJCP()
         
-
-        
+        #self.calculate_walked_skel_angles()
+ 
+        #self.calulate_CD_and_NM()
+    
         return
         
         
@@ -747,15 +820,130 @@ class KinectRecording:
     #     return scaled_skel_frame
         
         
-    def get_scale_for_joint(self, joint_name_0, joint_name_1):
+    # def get_scale_for_joint_old(self, joint_name_0, joint_name_1):
+    #     joint_scale = 0
+        
+    #     for i, segment_name in enumerate(BodySegments):
+    #         if joint_name_0 in segment_name.name and joint_name_1 in segment_name.name:
+    #             joint_scale = ref_body_segments_lens[i]
+    #             #break
+
+    #     print('\n',joint_name_0, joint_name_1, joint_scale)
+    #     return joint_scale
+    
+    
+    def calulate_CD_and_NM(self, rebuild=False, save_pngs=False):
+        scaled = ''
+        if self._scale_skeletons:
+            scaled = 'scaled_'
+                
+        joint_set = 'no_hands_'
+        ref_set = 'CoM_'
+        cached_CD_file_name = os.path.join(self._root_path, 
+                                           (self._dataset_prefix +
+                                            str(self._part_id) + '_' +
+                                            scaled +
+                                            joint_set +
+                                            ref_set +
+                                            'CD_' +                                            
+                                            self._movement + '.npy'))
+        
+        cached_NM_file_name = os.path.join(self._root_path,
+                                           (self._dataset_prefix +
+                                            str(self._part_id) + '_' +
+                                            scaled +
+                                            joint_set +
+                                            ref_set +
+                                            'NM_' +                                            
+                                            self._movement + '.npy'))
+        
+        cd_cache_file_exists = os.path.exists(cached_CD_file_name)
+        nm_cache_file_exists = os.path.exists(cached_NM_file_name)
+        
+        if not cd_cache_file_exists or not nm_cache_file_exists or rebuild:
+            cosine_distance = []
+            normalised_magnitude = []
+            for skel_idx in tqdm(range(np.shape(self.stacked_filtered_XYZ_values)[2])):
+                skel = self.stacked_filtered_XYZ_values[:,:,skel_idx]
+                
+                cd_row = []
+                nm_row = []
+                for ref_joint in RefernceTorsoJoints_COM: #RefernceTorsoJoints_HEAD RefernceTorsoJoints_NECK 
+                    for skel_joint in SkeletonJoints_no_hands: #SkeletonJoints
+                        cd = sm.cosine_between_joints(skel[:, ref_joint.value], 
+                                                           skel[:, skel_joint.value])
+                        # cd_row.append({'ref_joint': ref_joint.name,
+                        #                'skel_joint': skel_joint.name,
+                        #                'cd_dist': cd_dist})
+                        
+                        cd_row.append(cd)
+                        
+                        nm = sm.normalised_magnitude_between_joints(skel[:, skel_joint.value],
+                                                                    skel[:, ref_joint.value])
+                        
+                        # nm_row.append({'ref_joint': ref_joint.name,
+                        #                 'skel_joint': skel_joint.name,
+                        #                 'cd_dist': nm})
+                        
+                        nm_row.append(nm)
+                        
+                cosine_distance.append(cd_row)
+                normalised_magnitude.append(nm_row)    
+                
+            self.cosine_distance = cosine_distance
+            self.normalised_magnitude = normalised_magnitude
+            
+            #save
+            np.save(cached_CD_file_name, self.cosine_distance)
+            np.save(cached_NM_file_name, self.normalised_magnitude)
+        else:                        
+            self.cosine_distance = np.load(cached_CD_file_name)
+            print('loading:', cached_CD_file_name, '\n')
+            
+            self.normalised_magnitude = np.load(cached_NM_file_name)
+            print('loading:', cached_NM_file_name, '\n')
+            
+            
+        if save_pngs:
+            str_part_id = str(self._part_id)
+            plt.figure()
+            plt.plot(kinect_recording.cosine_distance)
+            plt.title('Cosign distance ' + scaled + ' ' + str_part_id)
+            plt.savefig(os.path.join(self._root_path,('CD_' + scaled + 
+                                                      ref_set + joint_set +
+                                                      str_part_id)))
+            plt.close()
+            
+            plt.figure()
+            plt.plot(kinect_recording.normalised_magnitude)
+            plt.title('Normalised magnitude ' + scaled + ' ' + str_part_id)
+            plt.savefig(os.path.join(self._root_path,('NM_' + scaled +
+                                                      ref_set + joint_set +
+                                                      str_part_id)))
+            plt.close()
+            
+        
+    def get_scale_for_joint(self, skel_frame, joint_name):
         joint_scale = 0
         
-        for i, segment_name in enumerate(BodySegments):
-            if joint_name_0 in segment_name.name and joint_name_1 in segment_name.name:
-                joint_scale = ref_body_segments_lens[i]
-                #break
+        j1_ref = ref_skeleton[SkeletonJoints.SPINEBASE.value]
+        #j1_ref = ref_skeleton[SkeletonJoints.SPINEMID.value]
+        #j1_ref = ref_skeleton[SkeletonJoints.ANKLERIGHT.value]
+        j2_ref = ref_skeleton[SkeletonJoints[joint_name].value]
+        ref_segment_len = sm.euclidean_distance_between_joints(j1_ref, j2_ref)
+        
+        j1_curr = skel_frame.iloc[SkeletonJoints.SPINEBASE.value][['X', 'Y', 'Z']].tolist()
+        #j1_curr = skel_frame.iloc[SkeletonJoints.SPINEMID.value][['X', 'Y', 'Z']].tolist()
+        #j1_curr = skel_frame.iloc[SkeletonJoints.ANKLERIGHT.value][['X', 'Y', 'Z']].tolist()
+        j2_curr = skel_frame.iloc[SkeletonJoints[joint_name].value][['X', 'Y', 'Z']].tolist()
+        curr_segment_len = sm.euclidean_distance_between_joints(j1_curr, j2_curr)
 
-        print('\n',joint_name_0, joint_name_1, joint_scale)
+        #print('\n',joint_name_0, joint_name_1, joint_scale)
+        if ref_segment_len == 0 and curr_segment_len == 0:
+            joint_scale = 1
+        else:
+            joint_scale = ref_segment_len / curr_segment_len
+        
         return joint_scale
     
     
@@ -771,6 +959,8 @@ class KinectRecording:
         
         if len(self._ref_spine_base) == 0:
             self._ref_spine_base =  skel_frame.iloc[SkeletonJoints.SPINEBASE.value][['X', 'Y', 'Z']].tolist()
+            #self._ref_spine_base =  skel_frame.iloc[SkeletonJoints.SPINEMID.value][['X', 'Y', 'Z']].tolist()
+            #self._ref_spine_base =  skel_frame.iloc[SkeletonJoints.ANKLERIGHT.value][['X', 'Y', 'Z']].tolist()
             #self._ref_spine_base =  skel_frame.iloc[SkeletonJoints.SPINESHOULDER.value][['X', 'Y', 'Z']].tolist()
             self._ref_skel_frame =  skel_frame
             #print('Getting Spinebase')
@@ -779,27 +969,33 @@ class KinectRecording:
             #skel_legs_len = BodySegments.HIPLEFT_ANKLELEFT
             #skel_arms_len = BodySegments.SHOULDERKEFT_WRISTLEFT
             
-            #skel_lens = [skel_torso_len, skel_legs_len, skel_arms_len]
-            #scale = [0,0,0]
+            # ref_skel_lens = [0.79, 0.79, 0.50]
+            # #scale = [0,0,0]
             
-            #get scale
-            for i, segment in enumerate(BodySegments):
-                #segment = BodySegments.HEAD_SPINE_BASE
-                j1 = skel_frame.iloc[segment.value[0]][['X', 'Y', 'Z']].tolist()
-                j2 = skel_frame.iloc[segment.value[1]][['X', 'Y', 'Z']].tolist()
-                segment_length = sm.euclidean_distance_between_joints(j1, j2)
+            # j1 = skel_frame.iloc[BodySegments.HEAD_SPINE_BASE.value[0]][['X', 'Y', 'Z']].tolist()
+            # j2 = skel_frame.iloc[BodySegments.HEAD_SPINE_BASE.value[1]][['X', 'Y', 'Z']].tolist()
+            # skel_torso_len = sm.euclidean_distance_between_joints(j1, j2)            
+            # self._torso_scale = ref_skel_lens[0] / skel_torso_len
+            
+            # #get scale
+            # for i, segment in enumerate(BodySegments):
+            #     #segment = BodySegments.HEAD_SPINE_BASE
+            #     j1 = skel_frame.iloc[segment.value[0]][['X', 'Y', 'Z']].tolist()
+            #     j2 = skel_frame.iloc[segment.value[1]][['X', 'Y', 'Z']].tolist()
+            #     segment_length = sm.euclidean_distance_between_joints(j1, j2)
                 
-                scale = ref_body_segments_lens[i] / segment_length
-                self._skel_scale.append(scale) 
+            #     scale = ref_body_segments_lens[i] / segment_length
+            #     self._skel_scale.append(scale) 
+                
+                
                 
         normalised_skel_frame = pd.DataFrame.copy(skel_frame,deep=False)
         # x = 0
         # y = 1
         # z = 2
                 
-
-        for i, joint in enumerate(HierarchyForBodySegments): #SkeletonJoints
-            #joint_name = joint.name
+        for i, joint in enumerate(SkeletonJoints): #HierarchyForBodySegments
+            joint_name = joint.name
             joint_number = joint.value
              
             #normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('X')] = (skel_frame.iloc[joint_number]['X'] - self._ref_skel_frame.iloc[joint_number]['X'])*10
@@ -814,8 +1010,8 @@ class KinectRecording:
             normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('Z')] = (skel_frame.iloc[joint_number]['Z'] - self._ref_spine_base[Z])
         
             if self._scale_skeletons:
-                skel_scale = self.get_scale_for_joint(SkeletonJoints(i).name, SkeletonJoints(i+1).name)
-                    
+                skel_scale = self.get_scale_for_joint(skel_frame, joint_name)
+                         
                 normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('X')] = (normalised_skel_frame.iloc[joint_number]['X'] * skel_scale)
                 normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('Y')] = (normalised_skel_frame.iloc[joint_number]['Y'] * skel_scale)
                 normalised_skel_frame.iloc[joint_number, normalised_skel_frame.columns.get_loc('Z')] = (normalised_skel_frame.iloc[joint_number]['Z'] * skel_scale)
@@ -1572,7 +1768,7 @@ class KinectRecording:
 
 # %%        
 if __name__ == "__main__": 
-
+    scale_skeletons = False
 
     root_path = os.path.abspath('../../')
     #_part_id = '3'
@@ -1692,7 +1888,20 @@ if __name__ == "__main__":
                              'impairment_stats_SD_1.96', 'impairment_stats_SD_1.5',
                              'impairment_adult', 'impairment_older']
             labels = register[register['part_id'] == _part_id][label_columns]
-            kinect_recording = KinectRecording(_skel_root_path, _dataset_prefix, _movement, _int_part_id, labels=labels, scale_skeletons=True)
+            kinect_recording = None
+            kinect_recording = KinectRecording(_skel_root_path, _dataset_prefix, _movement, _int_part_id, labels=labels, scale_skeletons=scale_skeletons)
+            kinect_recording.calulate_CD_and_NM(rebuild=False, save_pngs=True)
+        
+            plt.plot(kinect_recording.cosine_distance)
+            plt.title('Cosign distance '+ str(kinect_recording._part_id))
+            plt.show()
+            
+            plt.plot(kinect_recording.normalised_magnitude)
+            plt.title('Normalised magnitude '+ str(kinect_recording._part_id))
+            plt.show()
+        
+            # if _part_id == 'SPPB4':
+            #     sys.exit
         
             if len(all_Stacked_filtered_angle_vlaues) == 0:
                 all_Stacked_filtered_angle_vlaues = kinect_recording.stacked_filtered_angle_vlaues
@@ -1705,7 +1914,7 @@ if __name__ == "__main__":
 
     #Save csv with headers
     #_file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups.csv'
-    _file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups_65_1.csv'
+    _file_name = '_Angles_from_heel_and_Sway_Metrics_inc_groups_65_1_new.csv'
     with open(_dataset_prefix + '_' + _movement + _file_name,
               'wt', newline ='') as file:
         writer = csv.writer(file, delimiter=',')

@@ -14,6 +14,7 @@ import os
 
 import math
 from scipy import signal
+from scipy.spatial import distance
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
@@ -240,6 +241,21 @@ def euclidean_distance_between_joints(j1, j2):
     #ed = np.sqrt(0 + np.square(j1[1] - j2[1]) + np.square(j1[2] - j2[2]))
     
     return ed
+
+
+def cosine_between_joints(j1, j2):
+    cd = distance.cosine(j1, j2)
+    
+    return cd
+
+
+def normalised_magnitude_between_joints(j, j_ref):
+    mag_j = np.linalg.norm(j)
+    mag_j_ref = np.linalg.norm(j_ref)
+    
+    nn = mag_j / mag_j_ref
+    
+    return nn
 
 
 def get_joint_XYZ(skel_frame_row):
