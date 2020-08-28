@@ -243,8 +243,18 @@ def euclidean_distance_between_joints(j1, j2):
     return ed
 
 
-def cosine_between_joints(j1, j2):
+def cosine_distance_between_joints(j1, j2):
     cd = distance.cosine(j1, j2)
+    
+    # dot = np.dot(j1, j2)
+    # mag_v = np.linalg.norm(j1)
+    # mag_u = np.linalg.norm(j2)
+
+    # my_sim = (dot/
+    #        (mag_v * mag_u))
+    # my_dist = 1 - my_sim
+    
+    # cd = my_dist
     
     return cd
 

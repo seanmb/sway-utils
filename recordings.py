@@ -20,6 +20,9 @@ from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
+import matplotlib.image as mpl_image
+
+from PIL import Image as pil_image
 
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -39,8 +42,10 @@ sys.path.append(os.path.abspath('../'))
 from sway_utils import metrics as sm
 from Utils.Utils import walkFileSystem, get_part_dirs
 
-
 import csv
+
+from sklearn import preprocessing
+import scipy.misc
 
 #import transforms3d
 
@@ -838,7 +843,7 @@ class KinectRecording:
             scaled = 'scaled_'
                 
         joint_set = 'no_hands_'
-        ref_set = 'CoM_'
+        ref_set = 'CoM_' # 'CoM_' 'Neck_'
         cached_CD_file_name = os.path.join(self._root_path, 
                                            (self._dataset_prefix +
                                             str(self._part_id) + '_' +
@@ -863,27 +868,31 @@ class KinectRecording:
         if not cd_cache_file_exists or not nm_cache_file_exists or rebuild:
             cosine_distance = []
             normalised_magnitude = []
+            #cd_csv_rows = []
+            #nm_csv_rows = []
             for skel_idx in tqdm(range(np.shape(self.stacked_filtered_XYZ_values)[2])):
                 skel = self.stacked_filtered_XYZ_values[:,:,skel_idx]
                 
                 cd_row = []
                 nm_row = []
-                for ref_joint in RefernceTorsoJoints_COM: #RefernceTorsoJoints_HEAD RefernceTorsoJoints_NECK 
+                col_names = []
+                for ref_joint in RefernceTorsoJoints_COM: #RefernceTorsoJoints_HEAD RefernceTorsoJoints_NECK RefernceTorsoJoints_COM
                     for skel_joint in SkeletonJoints_no_hands: #SkeletonJoints
-                        cd = sm.cosine_between_joints(skel[:, ref_joint.value], 
-                                                           skel[:, skel_joint.value])
-                        # cd_row.append({'ref_joint': ref_joint.name,
-                        #                'skel_joint': skel_joint.name,
-                        #                'cd_dist': cd_dist})
+                        cd = sm.cosine_distance_between_joints(skel[:, ref_joint.value], 
+                                                               skel[:, skel_joint.value])
+                        col_names.append(ref_joint.name + '_' + skel_joint.name)
+                        # cd_csv_rows.append({'ref_joint': ref_joint.name,
+                        #                    'skel_joint': skel_joint.name,
+                        #                    'cd': cd})
                         
                         cd_row.append(cd)
                         
                         nm = sm.normalised_magnitude_between_joints(skel[:, skel_joint.value],
                                                                     skel[:, ref_joint.value])
                         
-                        # nm_row.append({'ref_joint': ref_joint.name,
-                        #                 'skel_joint': skel_joint.name,
-                        #                 'cd_dist': nm})
+                        # nm_csv_rows.append({'ref_joint': ref_joint.name,
+                        #                    'skel_joint': skel_joint.name,
+                        #                    'nm': nm})
                         
                         nm_row.append(nm)
                         
@@ -896,6 +905,13 @@ class KinectRecording:
             #save
             np.save(cached_CD_file_name, self.cosine_distance)
             np.save(cached_NM_file_name, self.normalised_magnitude)
+            
+            # for col in SkeletonJoints_no_hands:
+            #     col_names.append(col.name)
+            pd.DataFrame(self.cosine_distance, columns=col_names).to_csv(cached_CD_file_name.replace('.npy', '.csv'))
+            pd.DataFrame(self.normalised_magnitude, columns=col_names).to_csv(cached_NM_file_name.replace('.npy', '.csv'))
+
+
         else:                        
             self.cosine_distance = np.load(cached_CD_file_name)
             print('loading:', cached_CD_file_name, '\n')
@@ -914,6 +930,7 @@ class KinectRecording:
                                                       str_part_id)))
             plt.close()
             
+            
             plt.figure()
             plt.plot(kinect_recording.normalised_magnitude)
             plt.title('Normalised magnitude ' + scaled + ' ' + str_part_id)
@@ -921,6 +938,15 @@ class KinectRecording:
                                                       ref_set + joint_set +
                                                       str_part_id)))
             plt.close()
+            
+            
+            img = pd.DataFrame(self.cosine_distance).values
+            #min_max_scaler = preprocessing.MinMaxScaler()
+            img_scaled = ((img - img.min()) * (1/(img.max() 
+                         - img.min()) * 255)).astype('uint8')
+            img_3ch = np.dstack([img_scaled, img_scaled, img_scaled])
+            img_3ch_to_save = pil_image.fromarray(img_3ch, mode='RGB')
+            img_3ch_to_save.save(cached_NM_file_name.replace('.npy', '.png'))
             
         
     def get_scale_for_joint(self, skel_frame, joint_name):
@@ -1768,7 +1794,7 @@ class KinectRecording:
 
 # %%        
 if __name__ == "__main__": 
-    scale_skeletons = False
+    scale_skeletons = True
 
     root_path = os.path.abspath('../../')
     #_part_id = '3'
@@ -1783,9 +1809,9 @@ if __name__ == "__main__":
     #_movement = 'Foam-Quiet-Standing-Eyes-Open'
     #_movement = 'Foam-Quiet-Standing-Eyes-Closed'
     #_movement = 'Semi-Tandem-Balance'
-    #_movement = 'Tandem-Balance'
-    #_movement = 'Unilateral-Stance-Eyes-Closed'
-    #_movement = 'Ramp-Quiet-Standing-Eyes-Closed'
+    #_movement = 'Tandem-Balance' # -
+    #_movement = 'Unilateral-Stance-Eyes-Closed' # -
+    #_movement = 'Ramp-Quiet-Standing-Eyes-Closed' # -
     
     #_skel_root_path = os.path.join(root_path, 'SPPB', _part_id, _part_id +'_'+ _movement, 'skel')
     #os.path.abspath(root_path + '/SPPB/' +  _part_id +'_'+ _movement +'/skel')
@@ -1890,7 +1916,7 @@ if __name__ == "__main__":
             labels = register[register['part_id'] == _part_id][label_columns]
             kinect_recording = None
             kinect_recording = KinectRecording(_skel_root_path, _dataset_prefix, _movement, _int_part_id, labels=labels, scale_skeletons=scale_skeletons)
-            kinect_recording.calulate_CD_and_NM(rebuild=False, save_pngs=True)
+            kinect_recording.calulate_CD_and_NM(rebuild=True, save_pngs=True)
         
             plt.plot(kinect_recording.cosine_distance)
             plt.title('Cosign distance '+ str(kinect_recording._part_id))
